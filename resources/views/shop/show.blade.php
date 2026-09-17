@@ -97,13 +97,22 @@
                         money(amount) {
                             return this.symbol + ' ' + Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         },
+                        {{-- Percent off for the selected variant. No double quotes or --}}
+                        {{-- angle brackets in here: this lives inside an HTML attribute. --}}
+                        offLabel(sale, regular) {
+                            if (! regular || ! (sale < regular)) return '';
+                            const pct = Math.round((regular - sale) / regular * 10000) / 100;
+                            return (pct % 1 === 0 ? pct : pct.toFixed(2)) + '% OFF';
+                        },
                     }">
-                    <div class="mt-5 flex flex-wrap items-baseline gap-3">
-                        <span class="text-3xl font-bold text-slate-900" x-text="variant ? money(variant.price) : @js(\App\Support\Money::format($product->current_price))">@money($product->current_price)</span>
-                        @if($product->on_sale)
-                            <span class="text-lg text-slate-400 line-through" x-show="! variant || variant.price < variant.regular" x-text="variant ? money(variant.regular) : @js(\App\Support\Money::format($product->price))">@money($product->price)</span>
-                        @endif
-                        <span class="text-xs text-slate-400" x-show="variant" x-text="'SKU ' + (variant ? variant.sku : '')"></span>
+                    <div class="df-price mt-5">
+                        <b x-text="variant ? money(variant.price) : @js(\App\Support\Money::format($product->current_price))">@money($product->current_price)</b>
+                        <s x-show="variant ? variant.price < variant.regular : @js($product->on_sale)"
+                           x-text="variant ? money(variant.regular) : @js(\App\Support\Money::format($product->price))">@money($product->price)</s>
+                        <span class="df-off"
+                              x-show="variant ? variant.price < variant.regular : @js($product->on_sale)"
+                              x-text="variant ? offLabel(variant.price, variant.regular) : @js($product->discount_label)">{{ $product->discount_label }}</span>
+                        <span class="df-price__sku" x-show="variant" x-text="'SKU ' + (variant ? variant.sku : '')"></span>
                     </div>
 
                     @if($product->short_description)

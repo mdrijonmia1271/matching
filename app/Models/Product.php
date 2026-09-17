@@ -166,6 +166,31 @@ class Product extends Model
         return (int) round((((float) $this->price - $this->current_price) / (float) $this->price) * 100);
     }
 
+    /** The same discount without rounding away the fraction, e.g. 60.04. */
+    public function getDiscountPercentExactAttribute(): float
+    {
+        if (! $this->on_sale || (float) $this->price <= 0) {
+            return 0.0;
+        }
+
+        return round((((float) $this->price - $this->current_price) / (float) $this->price) * 100, 2);
+    }
+
+    /**
+     * "60.04% OFF" for the price row. A whole number drops the decimals, so a
+     * flat half-price deal reads "50% OFF" rather than "50.00% OFF".
+     */
+    public function getDiscountLabelAttribute(): string
+    {
+        $percent = $this->discount_percent_exact;
+
+        if ($percent <= 0) {
+            return '';
+        }
+
+        return (fmod($percent, 1.0) === 0.0 ? number_format($percent) : number_format($percent, 2)) . '% OFF';
+    }
+
     public function getInStockAttribute(): bool
     {
         return $this->stock > 0;

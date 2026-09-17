@@ -15,7 +15,7 @@
             <div class="flex flex-wrap items-center gap-2">
                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $order->statusColor() }}">{{ $order->status_label }}</span>
                 <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                    {{ $order->payment_method === 'cod' ? 'Cash on delivery' : 'Online' }} &middot; {{ $order->payment_status_label }}
+                    {{ $order->payment_method_label }} &middot; {{ $order->payment_status_label }}
                 </span>
             </div>
         </div>
@@ -113,7 +113,7 @@
                 @endif
 
                 <div class="space-y-3">
-                    @if($order->payment_method !== 'cod' && $order->payment_status !== 'paid' && $order->status !== 'cancelled')
+                    @if($order->canPayOnline())
                         <form method="POST" action="{{ route('orders.pay', $order) }}">
                             @csrf
                             <button class="btn-primary w-full">Pay now</button>

@@ -7,6 +7,14 @@ use App\Http\Controllers\Admin\BarcodeLabelController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\CustomerDueController;
+use App\Http\Controllers\Admin\CustomerPaymentController;
+use App\Http\Controllers\Admin\PosController;
+use App\Http\Controllers\Admin\PurchaseController;
+use App\Http\Controllers\Admin\RefundController;
+use App\Http\Controllers\Admin\ReturnController;
+use App\Http\Controllers\Admin\SupplierController;
+use App\Http\Controllers\Admin\SupplierPaymentController;
 use App\Http\Controllers\Admin\OrderPaymentController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
@@ -142,16 +150,46 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('inventory/count', [InventoryController::class, 'count'])->name('inventory.count');
     Route::post('inventory/count', [InventoryController::class, 'storeCount'])->name('inventory.count.store');
 
+    // The counter. Registered before orders so "pos" is never read as an order number.
+    Route::get('pos', [PosController::class, 'index'])->name('pos.index');
+    Route::post('pos', [PosController::class, 'store'])->name('pos.store');
+    Route::get('pos/customers', [PosController::class, 'customers'])->name('pos.customers');
+
     Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::get('orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
     Route::patch('orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status');
     Route::patch('orders/{order}/details', [AdminOrderController::class, 'updateDetails'])->name('orders.details');
     Route::post('orders/{order}/payments', [OrderPaymentController::class, 'store'])->name('orders.payments.store');
+    Route::post('orders/{order}/returns', [ReturnController::class, 'store'])->name('orders.returns.store');
+    Route::post('orders/{order}/refunds', [RefundController::class, 'store'])->name('orders.refunds.store');
+
+    Route::get('returns', [ReturnController::class, 'index'])->name('returns.index');
+    Route::get('returns/{return}', [ReturnController::class, 'show'])->name('returns.show');
+    Route::post('returns/{return}/approve', [ReturnController::class, 'approve'])->name('returns.approve');
+    Route::post('returns/{return}/reject', [ReturnController::class, 'reject'])->name('returns.reject');
+    Route::post('returns/{return}/receive', [ReturnController::class, 'receive'])->name('returns.receive');
 
     // Archived customers stay viewable, and editable so they can be corrected before restoring.
     Route::resource('customers', CustomerController::class)->withTrashed(['show', 'edit', 'update']);
     Route::patch('customers/{customer}/restore', [CustomerController::class, 'restore'])
         ->withTrashed()->name('customers.restore');
+    Route::post('customers/{customer}/payments', [CustomerPaymentController::class, 'store'])->name('customers.payments.store');
+    Route::get('customer-dues', [CustomerDueController::class, 'index'])->name('customer-dues.index');
+    Route::get('customer-dues/export', [CustomerDueController::class, 'export'])->name('customer-dues.export');
+
+    // Export is registered before the resource so "export" is not read as a supplier id.
+    Route::get('suppliers/export', [SupplierController::class, 'export'])->name('suppliers.export');
+    Route::resource('suppliers', SupplierController::class)->withTrashed(['show', 'edit', 'update']);
+    Route::patch('suppliers/{supplier}/restore', [SupplierController::class, 'restore'])
+        ->withTrashed()->name('suppliers.restore');
+    Route::post('suppliers/{supplier}/payments', [SupplierPaymentController::class, 'store'])->name('suppliers.payments.store');
+
+    // Export comes before the resource so "export" is not read as a purchase number.
+    Route::get('purchases/export', [PurchaseController::class, 'export'])->name('purchases.export');
+    Route::resource('purchases', PurchaseController::class)->except('destroy');
+    Route::post('purchases/{purchase}/receive', [PurchaseController::class, 'receive'])->name('purchases.receive');
+    Route::post('purchases/{purchase}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
 
     Route::get('accounts', [AccountController::class, 'index'])->name('accounts.index');
     Route::post('accounts', [AccountController::class, 'store'])->name('accounts.store');

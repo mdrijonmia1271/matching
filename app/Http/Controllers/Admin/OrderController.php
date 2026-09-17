@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\Order;
+use App\Services\AccountService;
 use App\Services\AuditLogger;
 use App\Services\OrderStatusService;
 use App\Services\PaymentService;
+use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -21,7 +23,7 @@ class OrderController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:orders.view', only: ['index', 'show']),
+            new Middleware('can:orders.view', only: ['index', 'show', 'invoice']),
             new Middleware('can:orders.update', only: ['updateStatus', 'updateDetails']),
         ];
     }
@@ -52,15 +54,29 @@ class OrderController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function show(Order $order)
+    public function show(Order $order, AccountService $accounts)
     {
         $methods = PaymentService::manualMethods();
+        $refundMethods = RefundService::methods();
 
         return view('admin.orders.show', [
-            'order' => $order->load('items.product', 'payments.account:id,name', 'payments.receiver:id,name', 'user', 'customer', 'statusHistories.user:id,name'),
+            'order' => $order->load('items.product', 'payments.account:id,name', 'payments.receiver:id,name',
+                'user', 'customer', 'statusHistories.user:id,name', 'returns.items',
+                'refunds.account:id,name', 'refunds.issuer:id,name', 'refunds.return:id,number'),
             'methods' => $methods,
+            'refundMethods' => $refundMethods,
             'accounts' => Account::active()->orderBy('sort_order')->get(['id', 'name', 'code']),
-            'methodAccounts' => collect($methods)->mapWithKeys(fn ($label, $method) => [$method => PaymentService::defaultAccountFor($method)?->id])->all(),
+            'balances' => $accounts->balances(),
+            'methodAccounts' => collect($methods + $refundMethods)
+                ->mapWithKeys(fn ($label, $method) => [$method => PaymentService::defaultAccountFor($method)?->id])->all(),
+        ]);
+    }
+
+    /** A printable invoice: the counter receipt, and a copy for any online order. */
+    public function invoice(Order $order)
+    {
+        return view('admin.orders.invoice', [
+            'order' => $order->load('items', 'payments.account:id,name', 'customer'),
         ]);
     }
 

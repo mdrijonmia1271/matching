@@ -38,6 +38,17 @@ class Order extends Model
         'refunded' => [],
     ];
 
+    /**
+     * Changes only the system makes, never a person picking from a menu. The
+     * returns workflow moves a delivered or shipped order to `returned` once
+     * every unit is back; refunds do the same for `refunded`.
+     */
+    public const SYSTEM_TRANSITIONS = [
+        'shipped' => ['returned'],
+        'delivered' => ['returned'],
+        'returned' => ['refunded'],
+    ];
+
     /** Customers may cancel from their account until the parcel is packed. */
     public const CUSTOMER_CANCELLABLE = ['pending', 'confirmed', 'processing'];
 
@@ -55,7 +66,7 @@ class Order extends Model
     ];
 
     protected $fillable = [
-        'order_number', 'user_id', 'customer_id', 'customer_name', 'customer_email', 'customer_phone',
+        'order_number', 'user_id', 'customer_id', 'channel', 'customer_name', 'customer_email', 'customer_phone',
         'shipping_address', 'shipping_city', 'note', 'admin_note', 'courier_name', 'tracking_number',
         'subtotal', 'discount', 'shipping_cost', 'total', 'paid_amount', 'refunded_amount', 'coupon_code', 'status', 'payment_method',
         'payment_status', 'paid_at', 'confirmed_at', 'shipped_at', 'delivered_at', 'cancelled_at',
@@ -123,6 +134,22 @@ class Order extends Model
         return $this->hasMany(OrderStatusHistory::class)->latest('id');
     }
 
+    public function returns()
+    {
+        return $this->hasMany(OrderReturn::class)->latest('id');
+    }
+
+    public function refunds()
+    {
+        return $this->hasMany(Refund::class)->latest('id');
+    }
+
+    /** Money that can still go back: what was paid, less what has already been refunded. */
+    public function getRefundableAmountAttribute(): float
+    {
+        return max(0.0, round((float) $this->paid_amount - (float) $this->refunded_amount, 2));
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return self::STATUS_LABELS[$this->status] ?? ucfirst((string) $this->status);
@@ -156,9 +183,43 @@ class Order extends Model
         return self::TRANSITIONS[$this->status] ?? [];
     }
 
+    /** @return list<string> */
+    public function systemNextStatuses(): array
+    {
+        return self::SYSTEM_TRANSITIONS[$this->status] ?? [];
+    }
+
     public function canBeCancelledByCustomer(): bool
     {
         return in_array($this->status, self::CUSTOMER_CANCELLABLE, true);
+    }
+
+    /** Sold over the counter rather than through the website. */
+    public function isPosSale(): bool
+    {
+        return $this->channel === 'pos';
+    }
+
+    /**
+     * Whether the customer can still settle this order through the online
+     * gateway. A counter sale never can: its money is taken at the till.
+     */
+    public function canPayOnline(): bool
+    {
+        return ! $this->isPosSale()
+            && $this->payment_method !== 'cod'
+            && $this->payment_status !== 'paid'
+            && $this->status !== 'cancelled';
+    }
+
+    public function getPaymentMethodLabelAttribute(): string
+    {
+        return match ($this->payment_method) {
+            'cod' => 'Cash on delivery',
+            'pos' => 'Paid at the counter',
+            'online' => 'Online payment',
+            default => config('shop.payment_methods')[$this->payment_method] ?? 'Online payment',
+        };
     }
 
     public function statusColor(): string

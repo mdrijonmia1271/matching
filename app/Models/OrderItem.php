@@ -36,4 +36,27 @@ class OrderItem extends Model
     {
         return $this->belongsTo(ProductVariant::class, 'variant_id')->withTrashed();
     }
+
+    public function returnItems()
+    {
+        return $this->hasMany(ReturnItem::class);
+    }
+
+    /**
+     * Units already claimed by a return. A rejected return releases its claim;
+     * one that is only requested still holds it, so the same unit cannot be
+     * booked onto two returns at once.
+     */
+    public function returnedQuantity(): int
+    {
+        return (int) $this->returnItems()
+            ->whereHas('return', fn ($query) => $query->claiming())
+            ->sum('quantity');
+    }
+
+    /** How many units of this line may still be sent back. */
+    public function returnableQuantity(): int
+    {
+        return max(0, (int) $this->quantity - $this->returnedQuantity());
+    }
 }

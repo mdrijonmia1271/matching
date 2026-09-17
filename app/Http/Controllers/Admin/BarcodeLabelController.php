@@ -43,7 +43,10 @@ class BarcodeLabelController extends Controller implements HasMiddleware
         if ($old = $request->old('items')) {
             $quantities = collect($old)->mapWithKeys(fn ($item) => [(int) ($item['variant_id'] ?? 0) => max(1, (int) ($item['quantity'] ?? 1))]);
         } elseif ($request->filled('variants')) {
-            $quantities = collect((array) $request->input('variants'))->mapWithKeys(fn ($id) => [(int) $id => 1]);
+            // `qty[variant id]` lets another screen — a received purchase, say — ask for one label per unit.
+            $wanted = collect((array) $request->input('qty'));
+            $quantities = collect((array) $request->input('variants'))
+                ->mapWithKeys(fn ($id) => [(int) $id => max(1, min(500, (int) ($wanted[$id] ?? 1)))]);
         }
 
         $variants = ProductVariant::with('product')->forLiveProducts()

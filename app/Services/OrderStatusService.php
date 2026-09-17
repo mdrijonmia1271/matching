@@ -29,21 +29,26 @@ class OrderStatusService
     public function __construct(protected OrderService $orders) {}
 
     /**
+     * @param  bool  $system  Set by a workflow that has already done the work
+     *                        (returns, refunds), not by staff picking a status.
+     *
      * @throws RuntimeException when the change is not allowed from the current status
      */
-    public function transition(Order $order, string $to, ?string $note = null, bool $byCustomer = false): Order
+    public function transition(Order $order, string $to, ?string $note = null, bool $byCustomer = false, bool $system = false): Order
     {
         if (! array_key_exists($to, Order::STATUS_LABELS)) {
             throw new InvalidArgumentException("Unknown order status [{$to}].");
         }
 
-        $updated = DB::transaction(function () use ($order, $to, $note, $byCustomer) {
+        $updated = DB::transaction(function () use ($order, $to, $note, $byCustomer, $system) {
             $locked = Order::with('items')->lockForUpdate()->findOrFail($order->id);
             $from = $locked->status;
 
-            $allowed = $byCustomer
-                ? $to === 'cancelled' && $locked->canBeCancelledByCustomer()
-                : in_array($to, $locked->nextStatuses(), true);
+            $allowed = match (true) {
+                $byCustomer => $to === 'cancelled' && $locked->canBeCancelledByCustomer(),
+                $system => in_array($to, $locked->systemNextStatuses(), true),
+                default => in_array($to, $locked->nextStatuses(), true),
+            };
 
             if (! $allowed) {
                 throw new RuntimeException($byCustomer

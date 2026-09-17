@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Account;
 use App\Models\Customer;
+use App\Models\CustomerPayment;
 use App\Models\Order;
+use App\Models\OrderReturn;
 use App\Models\Payment;
 use App\Services\AuditLogger;
+use App\Services\PaymentService;
+use App\Support\Money;
 use App\Support\Phone;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -40,15 +45,7 @@ class CustomerController extends Controller implements HasMiddleware
 
         $query = Customer::withTotals()
             ->when($request->input('status') === 'archived', fn ($q) => $q->onlyTrashed())
-            ->when($term !== '', function ($query) use ($term) {
-                $like = '%' . $term . '%';
-                $phone = Phone::looksLikePhone($term) ? Phone::normalise($term) : null;
-
-                $query->where(fn ($q) => $q->where('customers.name', 'like', $like)
-                    ->orWhere('customers.email', 'like', $like)
-                    ->orWhere('customers.phone', 'like', $like)
-                    ->when($phone, fn ($q) => $q->orWhere('customers.phone', 'like', '%' . $phone . '%')));
-            })
+            ->search($term)
             ->when(array_key_exists((string) $request->input('group'), Customer::GROUPS), fn ($q) => $q->where('customers.customer_group', $request->input('group')))
             ->when($request->input('due') === 'with', fn ($q) => $q->withDue());
 
@@ -72,7 +69,9 @@ class CustomerController extends Controller implements HasMiddleware
             'stats' => [
                 'customers' => Customer::count(),
                 'with_due' => Customer::withDue()->count(),
-                'total_due' => round((float) Customer::sum('opening_due') + (float) $orderDue, 2),
+                'total_due' => round((float) Customer::sum('opening_due')
+                    - (float) CustomerPayment::whereIn('customer_id', Customer::select('id'))->sum('opening_due_paid')
+                    + (float) $orderDue, 2),
             ],
         ]);
     }
@@ -95,15 +94,26 @@ class CustomerController extends Controller implements HasMiddleware
     public function show(Customer $customer)
     {
         $customer = Customer::withTrashed()->withTotals()->with('user:id,name,email')->findOrFail($customer->id);
+        $methods = PaymentService::manualMethods();
 
         return view('admin.customers.show', [
             'customer' => $customer,
-            'outstanding' => $customer->orders()
-                ->whereIn('status', Order::SALE_STATUSES)
-                ->whereColumn('total', '>', 'paid_amount')
-                ->orderBy('created_at')
-                ->get(),
+            'outstanding' => $customer->unpaidOrders()->get(),
+            'collections' => $customer->customerPayments()
+                ->with(['payments.order:id,order_number', 'account:id,name', 'receiver:id,name'])
+                ->orderByDesc('paid_at')
+                ->orderByDesc('id')
+                ->paginate(10, pageName: 'collections_page')
+                ->withQueryString(),
+            'methods' => $methods,
+            'accounts' => Account::active()->orderBy('sort_order')->get(['id', 'name', 'code']),
+            'methodAccounts' => collect($methods)->mapWithKeys(fn ($label, $method) => [$method => PaymentService::defaultAccountFor($method)?->id])->all(),
             'orders' => $customer->orders()->withCount('items')->latest()->paginate(15, pageName: 'orders_page')->withQueryString(),
+            'returns' => OrderReturn::where('customer_id', $customer->id)
+                ->with(['order:id,order_number', 'items'])
+                ->orderByDesc('id')
+                ->limit(10)
+                ->get(),
             'payments' => Payment::with(['order:id,order_number', 'account:id,name', 'receiver:id,name'])
                 ->whereHas('order', fn ($q) => $q->where('customer_id', $customer->id))
                 ->orderByDesc('id')
@@ -119,7 +129,16 @@ class CustomerController extends Controller implements HasMiddleware
 
     public function update(Request $request, Customer $customer)
     {
-        $customer->fill($this->validated($request, $customer));
+        $data = $this->validated($request, $customer);
+        $collected = round((float) $customer->customerPayments()->sum('opening_due_paid'), 2);
+
+        if ($data['opening_due'] < $collected) {
+            return back()->withInput()->withErrors([
+                'opening_due' => 'The opening due cannot be less than the ' . Money::format($collected) . ' already collected against it.',
+            ]);
+        }
+
+        $customer->fill($data);
         [$old, $new] = AuditLogger::changes($customer);
         $customer->save();
 

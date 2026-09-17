@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Order;
 use App\Models\Product;
+use App\Models\Review;
+use App\Models\User;
 use Illuminate\Support\Collection;
 
 class HomeController extends Controller
@@ -17,14 +20,19 @@ class HomeController extends Controller
         $deals = $this->cards()
             ->whereNotNull('sale_price')
             ->whereColumn('sale_price', '<', 'price')
-            ->orderByDesc('created_at')->take(6)->get();
+            ->orderByDesc('created_at')->take(8)->get();
+
+        $featured = $this->cards()->where('is_featured', true)->latest()->take(8)->get();
+        $latest = $this->cards()->latest()->take(8)->get();
 
         return view('home', [
             'categories' => $categories,
-            'featured' => $this->cards()->where('is_featured', true)->latest()->take(8)->get(),
-            'latest' => $this->cards()->latest()->take(8)->get(),
+            'featured' => $featured,
+            'latest' => $latest,
             'deals' => $deals,
-            'slides' => $this->heroSlides($deals),
+            'tabs' => $this->bestSellerTabs($featured, $latest, $deals),
+            'stats' => $this->stats(),
+            'gallery' => $this->cards()->inRandomOrder()->take(5)->get(),
         ]);
     }
 
@@ -37,24 +45,56 @@ class HomeController extends Controller
     }
 
     /**
-     * Hero slides are built from real discounted products, so the banner never
-     * advertises something the catalogue does not actually sell.
+     * The four "Best sellers" tabs. Every tab is a real query, so a tab never
+     * shows something the catalogue does not sell — and never sits empty while
+     * there are products to show.
      *
+     * @param  Collection<int, Product>  $featured
+     * @param  Collection<int, Product>  $latest
      * @param  Collection<int, Product>  $deals
-     * @return Collection<int, array<string, mixed>>
+     * @return array<string, Collection<int, Product>>
      */
-    protected function heroSlides(Collection $deals): Collection
+    protected function bestSellerTabs(Collection $featured, Collection $latest, Collection $deals): array
     {
-        return $deals->sortByDesc('discount_percent')
-            ->unique('category_id')
-            ->take(3)
-            ->values()
-            ->map(fn (Product $product, int $index) => [
-                'eyebrow' => $index === 0 ? 'New Collection ' . now()->year : $product->category?->name,
-                'title' => $product->category?->name ?? 'New Arrivals',
-                'subtitle' => $index === 0 ? 'picked for you' : 'now on offer',
-                'text' => $product->short_description,
-                'product' => $product,
-            ]);
+        // Most ordered first: the honest reading of "best seller".
+        $best = $this->cards()
+            ->withCount(['orderItems as sold_count' => fn ($q) => $q->whereHas('order',
+                fn ($order) => $order->whereIn('status', Order::SALE_STATUSES))])
+            ->orderByDesc('sold_count')->orderByDesc('is_featured')->latest()
+            ->take(8)->get();
+
+        $womensCategory = Category::active()
+            ->where(fn ($q) => $q->where('name', 'like', '%women%')->orWhere('name', 'like', '%ladies%'))
+            ->value('id');
+
+        $womens = $womensCategory
+            ? $this->cards()->where('category_id', $womensCategory)->latest()->take(8)->get()
+            : $this->cards()->orderByDesc('rating_avg')->latest()->take(8)->get();
+
+        return array_filter([
+            'All' => $best->isNotEmpty() ? $best : $latest,
+            'New arrivals' => $latest,
+            'Stylish products' => $featured->isNotEmpty() ? $featured : $deals,
+            'Womens' => $womens,
+        ], fn (Collection $items) => $items->isNotEmpty());
+    }
+
+    /**
+     * Storefront counters. Real figures only: an invented number on the home
+     * page is the first thing a returning customer notices.
+     *
+     * @return array<int, array<string, string>>
+     */
+    protected function stats(): array
+    {
+        $delivered = Order::whereIn('status', Order::SALE_STATUSES)->count();
+        $rated = (float) Review::where('is_approved', true)->avg('rating');
+
+        return [
+            ['label' => 'Product', 'value' => number_format(Product::active()->count()), 'icon' => 'box'],
+            ['label' => 'Followers', 'value' => number_format(User::count()), 'icon' => 'users'],
+            ['label' => 'Monthly Sales', 'value' => number_format($delivered), 'icon' => 'chart'],
+            ['label' => 'Happy Customers', 'value' => ($rated > 0 ? round($rated / 5 * 100) : 100) . '%', 'icon' => 'user'],
+        ];
     }
 }

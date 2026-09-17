@@ -1,110 +1,81 @@
 @props(['product'])
 
+{{--
+    The Dream Fashion product card. One definition used by the home page, the
+    shop listing, the related products on a product page and the wishlist, so
+    the grid looks the same everywhere.
+
+    Variants matter here: a product with sizes/colours cannot be added straight
+    to the cart, so it links to its page instead of posting a form that would
+    only come back with "please choose a colour and size".
+--}}
 @php
     $wishlisted = auth()->check()
         && auth()->user()->wishlists->contains('product_id', $product->id);
 
-    $isNew = ! $product->on_sale && ($product->is_new_arrival || $product->created_at?->gt(now()->subDays(21)));
-
     // rating_avg comes from the listing query when it is available; fall back to
-    // the accessor. A product with no reviews shows no star row at all.
+    // the accessor. With no reviews at all the row still shows, unfilled.
     $rating = (float) ($product->rating_avg ?? $product->average_rating);
+    $score = $rating > 0 ? (int) round($rating) : 0;
 @endphp
 
-<article class="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lg hover:shadow-brand-600/5">
-    <div class="relative aspect-[3/4] overflow-hidden bg-slate-100">
-        <a href="{{ route('shop.show', $product) }}">
-            <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy"
-                 class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
-        </a>
+<article class="df-card">
+    <a href="{{ route('shop.show', $product) }}" class="df-card__media">
+        @if($product->on_sale)
+            <span class="df-card__badge">-{{ $product->discount_percent }}%</span>
+        @endif
 
-        <div class="absolute left-3 top-3 flex flex-col gap-1.5">
-            @if($product->on_sale)
-                <span class="pill bg-rose-600 text-white">-{{ $product->discount_percent }}%</span>
-            @elseif($isNew)
-                <span class="pill bg-emerald-500 text-white">New</span>
-            @endif
-        </div>
-
-        {{-- Quick actions: visible on touch, slide in on hover for pointers --}}
-        <div class="absolute right-3 top-3 flex flex-col gap-2 transition duration-300 md:translate-x-14 md:opacity-0 md:group-hover:translate-x-0 md:group-hover:opacity-100">
-            @auth
-                <form method="POST" action="{{ route('wishlist.toggle', $product) }}">
-                    @csrf
-                    <button type="submit" class="icon-btn {{ $wishlisted ? 'bg-rose-500 text-white' : '' }}"
-                            title="{{ $wishlisted ? 'Remove from wishlist' : 'Save to wishlist' }}">
-                        <svg class="h-4 w-4" fill="{{ $wishlisted ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7-4.6-9.2-9A5 5 0 0 1 12 6.2 5 5 0 0 1 21.2 12C19 16.4 12 21 12 21z"/>
-                        </svg>
-                    </button>
-                </form>
-            @else
-                <a href="{{ route('login') }}" class="icon-btn" title="Log in to save to wishlist">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7-4.6-9.2-9A5 5 0 0 1 12 6.2 5 5 0 0 1 21.2 12C19 16.4 12 21 12 21z"/>
-                    </svg>
-                </a>
-            @endauth
-
-            @if($product->has_variants)
-                {{-- Size and colour have to be chosen on the product page. --}}
-                <a href="{{ route('shop.show', $product) }}" class="icon-btn" title="Choose options">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12l-1 13H7L6 7z"/><path stroke-linecap="round" d="M9 7a3 3 0 0 1 6 0"/>
-                    </svg>
-                </a>
-            @else
-                <form method="POST" action="{{ route('cart.store', $product) }}">
-                    @csrf
-                    <button type="submit" class="icon-btn" title="Add to cart" @disabled(! $product->in_stock)>
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12l-1 13H7L6 7z"/><path stroke-linecap="round" d="M9 7a3 3 0 0 1 6 0"/>
-                        </svg>
-                    </button>
-                </form>
-            @endif
-        </div>
+        <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy">
 
         @unless($product->in_stock)
-            <div class="absolute inset-0 grid place-items-center bg-white/70">
-                <span class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white">Out of stock</span>
-            </div>
+            <span class="df-card__soldout">Out of stock</span>
         @endunless
-    </div>
+    </a>
 
-    <div class="flex flex-1 flex-col p-4">
-        @if($product->category)
-            <p class="text-[11px] font-semibold uppercase tracking-wide text-brand-600">{{ $product->category->name }}</p>
-        @endif
-
-        <h3 class="mt-1.5 line-clamp-2 text-sm font-semibold text-slate-900">
-            <a href="{{ route('shop.show', $product) }}" class="hover:text-brand-600">{{ $product->name }}</a>
-        </h3>
-
-        @if($rating > 0)
-            <div class="mt-2">
-                <x-stars :rating="$rating" size="h-3.5 w-3.5" />
-            </div>
-        @endif
-
-        <div class="mt-3 flex items-baseline gap-2">
-            <span class="text-base font-bold text-slate-900">@money($product->current_price)</span>
-            @if($product->on_sale)
-                <span class="text-xs text-slate-400 line-through">@money($product->price)</span>
-            @endif
+    <div class="df-card__body">
+        <div class="df-stars" @if($score > 0) aria-label="{{ $score }} out of 5" @endif>
+            @for($s = 1; $s <= 5; $s++)
+                <svg viewBox="0 0 24 24" class="{{ $s <= $score ? 'is-on' : '' }}" fill="currentColor" aria-hidden="true">
+                    <path d="m12 2 2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/>
+                </svg>
+            @endfor
         </div>
 
-        @if($product->has_variants)
-            <a href="{{ route('shop.show', $product) }}" class="btn-primary relative mt-4 w-full {{ $product->in_stock ? '' : 'pointer-events-none opacity-60' }}">
-                {{ $product->in_stock ? 'Choose options' : 'Unavailable' }}
-            </a>
+        <h3 class="df-card__title">
+            <a href="{{ route('shop.show', $product) }}">{{ $product->name }}</a>
+        </h3>
+
+        <p class="df-card__price">
+            <b>@money($product->current_price)</b>
+            @if($product->on_sale)
+                <s>@money($product->price)</s>
+                <span class="df-off">{{ $product->discount_label }}</span>
+            @endif
+        </p>
+
+        @if(! $product->in_stock)
+            <a href="{{ route('shop.show', $product) }}" class="df-btn df-btn--olive df-btn--sm is-muted">Unavailable</a>
+        @elseif($product->has_variants)
+            {{-- Size and colour have to be chosen on the product page. --}}
+            <a href="{{ route('shop.show', $product) }}" class="df-btn df-btn--olive df-btn--sm">Shop now</a>
         @else
-            <form method="POST" action="{{ route('cart.store', $product) }}" class="relative mt-4">
+            <form method="POST" action="{{ route('cart.store', $product) }}">
                 @csrf
-                <button type="submit" class="btn-primary w-full" @disabled(! $product->in_stock)>
-                    {{ $product->in_stock ? 'Add to cart' : 'Unavailable' }}
-                </button>
+                <input type="hidden" name="quantity" value="1">
+                <button type="submit" class="df-btn df-btn--olive df-btn--sm">Add to Cart</button>
             </form>
         @endif
+
+        @auth
+            <form method="POST" action="{{ route('wishlist.toggle', $product) }}" class="df-card__wish">
+                @csrf
+                <button type="submit" class="{{ $wishlisted ? 'is-on' : '' }}"
+                        title="{{ $wishlisted ? 'Remove from wishlist' : 'Save to wishlist' }}">
+                    <svg viewBox="0 0 24 24" fill="{{ $wishlisted ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="1.7">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7-4.6-9.2-9A5 5 0 0 1 12 6.2 5 5 0 0 1 21.2 12C19 16.4 12 21 12 21z"/>
+                    </svg>
+                </button>
+            </form>
+        @endauth
     </div>
 </article>

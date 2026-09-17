@@ -142,7 +142,7 @@
                         <a href="{{ route('shop.index') }}" class="btn-primary mt-2">Clear filters</a>
                     </div>
                 @else
-                    <div class="grid grid-cols-2 gap-5 xl:grid-cols-3">
+                    <div class="df-grid df-grid--shop">
                         @foreach($products as $product)
                             <x-product-card :product="$product" />
                         @endforeach

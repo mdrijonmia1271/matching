@@ -13,8 +13,12 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('admin.orders.index') }}" class="text-sm text-slate-500 hover:text-brand-600">&larr; Back to orders</a>
         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
+            @if($order->isPosSale())
+                <span class="rounded-full bg-violet-100 px-3 py-1 text-violet-700">Counter sale</span>
+            @endif
             <span class="rounded-full px-3 py-1 {{ $order->statusColor() }}">{{ $order->status_label }}</span>
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">{{ $order->payment_method === 'cod' ? 'Cash on delivery' : 'Online' }} &middot; {{ $order->payment_status_label }}</span>
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">{{ $order->payment_method_label }} &middot; {{ $order->payment_status_label }}</span>
+            <a href="{{ route('admin.orders.invoice', $order) }}" target="_blank" class="btn-secondary">Invoice</a>
         </div>
     </div>
 
@@ -62,6 +66,109 @@
                     <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-bold"><dt>Total</dt><dd>@money($order->total)</dd></div>
                 </dl>
             </div>
+
+
+            @php
+                $returnable = $order->items->filter(fn ($item) => $item->returnableQuantity() > 0);
+                $canReturn = $returnable->isNotEmpty() && auth()->user()->can('orders.update')
+                    && ! in_array($order->status, ['pending', 'cancelled'], true);
+            @endphp
+
+            @if($order->returns->isNotEmpty())
+                <section class="card">
+                    <div class="border-b border-slate-200 px-6 py-4">
+                        <h2 class="text-base font-bold text-slate-900">Returns</h2>
+                        <p class="text-xs text-slate-500">Goods sent back on this order.</p>
+                    </div>
+                    <table class="w-full text-sm">
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach($order->returns as $orderReturn)
+                                <tr>
+                                    <td class="px-6 py-3">
+                                        <a href="{{ route('admin.returns.show', $orderReturn) }}" class="font-mono text-xs font-semibold text-brand-600 hover:underline">{{ $orderReturn->number }}</a>
+                                        <span class="block text-xs text-slate-400">{{ $orderReturn->reason_label }} &middot; {{ $orderReturn->created_at?->format('d M Y') }}</span>
+                                    </td>
+                                    <td class="px-6 py-3">
+                                        <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $orderReturn->status_color }}">{{ $orderReturn->status_label }}</span>
+                                    </td>
+                                    <td class="px-6 py-3 text-right text-slate-700">{{ number_format($orderReturn->quantity) }} unit(s)</td>
+                                    <td class="px-6 py-3 text-right font-semibold text-slate-900">@money($orderReturn->refund_total)</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </section>
+            @endif
+
+            @if($canReturn)
+                <section class="card p-6" x-data="{ open: false }">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">Return items</h2>
+                            <p class="text-xs text-slate-500">Nothing moves until the goods are received.</p>
+                        </div>
+                        <button type="button" @click="open = ! open" class="btn-secondary" x-text="open ? 'Cancel' : 'Start a return'"></button>
+                    </div>
+
+                    <form method="POST" action="{{ route('admin.orders.returns.store', $order) }}" x-show="open" x-cloak class="mt-5 space-y-4">
+                        @csrf
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                                    <tr>
+                                        <th class="px-3 py-2">Item</th>
+                                        <th class="w-28 px-3 py-2">Can return</th>
+                                        <th class="w-28 px-3 py-2">Quantity</th>
+                                        <th class="w-52 px-3 py-2">Condition</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    @foreach($returnable->values() as $index => $item)
+                                        <tr>
+                                            <td class="px-3 py-2">
+                                                <span class="font-medium text-slate-800">{{ $item->product_name }}</span>
+                                                <span class="block font-mono text-xs text-slate-400">{{ $item->sku ?? '—' }}</span>
+                                                <input type="hidden" name="items[{{ $index }}][order_item_id]" value="{{ $item->id }}">
+                                            </td>
+                                            <td class="px-3 py-2 text-slate-500">{{ $item->returnableQuantity() }} of {{ $item->quantity }}</td>
+                                            <td class="px-3 py-2">
+                                                <input type="number" name="items[{{ $index }}][quantity]" min="0" max="{{ $item->returnableQuantity() }}"
+                                                       value="0" class="input">
+                                            </td>
+                                            <td class="px-3 py-2">
+                                                <select name="items[{{ $index }}][condition]" class="input">
+                                                    @foreach(\App\Models\OrderReturn::CONDITIONS as $key => $label)
+                                                        <option value="{{ $key }}">{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <label for="return_reason" class="label">Reason</label>
+                                <select id="return_reason" name="reason" required class="input">
+                                    @foreach(\App\Models\OrderReturn::REASONS as $key => $label)
+                                        <option value="{{ $key }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                @error('reason') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label for="return_note" class="label">Note <span class="text-slate-400">(optional)</span></label>
+                                <input id="return_note" name="note" type="text" maxlength="500" class="input" placeholder="e.g. Customer says the zip is broken">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary">Raise return</button>
+                    </form>
+                </section>
+            @endif
 
             <section class="card p-6">
                 <h2 class="text-base font-bold text-slate-900">Status history</h2>
@@ -243,6 +350,98 @@
                     </form>
                 @endif
             </section>
+
+
+            @php
+                $refundable = $order->refundable_amount;
+                $canRefund = $refundable > 0 && auth()->user()->can('orders.refund')
+                    && auth()->user()->can('accounting.create') && $refundMethods;
+                $openReturns = $order->returns->where('status', 'received');
+            @endphp
+
+            @if($order->refunds->isNotEmpty() || $canRefund)
+                <section class="card p-6">
+                    <div class="flex items-center justify-between gap-2">
+                        <h2 class="text-base font-bold text-slate-900">Refunds</h2>
+                        @if($refundable > 0)
+                            <span class="text-xs text-slate-500">@money($refundable) can go back</span>
+                        @endif
+                    </div>
+
+                    @if($order->refunds->isNotEmpty())
+                        <ul class="mt-4 divide-y divide-slate-100 border-t border-slate-100 text-xs">
+                            @foreach($order->refunds as $refund)
+                                <li class="py-2">
+                                    <div class="flex justify-between gap-2">
+                                        <span class="font-semibold text-slate-800">
+                                            @money($refund->amount)
+                                            <span class="font-normal text-slate-500">{{ $refund->method_label }}{{ $refund->account ? ' ← ' . $refund->account->name : '' }}</span>
+                                        </span>
+                                        <span class="font-mono text-slate-400">{{ $refund->number }}</span>
+                                    </div>
+                                    <p class="text-slate-400">
+                                        {{ $refund->refunded_at?->format('d M Y, g:i a') }}{{ $refund->issuer ? ' · ' . $refund->issuer->name : '' }}{{ $refund->reference ? ' · ' . $refund->reference : '' }}
+                                        @if($refund->return) &middot; <a href="{{ route('admin.returns.show', $refund->return) }}" class="text-brand-600 hover:underline">{{ $refund->return->number }}</a>@endif
+                                    </p>
+                                    @if($refund->note)<p class="text-slate-500">{{ $refund->note }}</p>@endif
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    @if($canRefund)
+                        <form method="POST" action="{{ route('admin.orders.refunds.store', $order) }}" class="mt-4 space-y-3 border-t border-slate-200 pt-4"
+                              x-data="{ method: @js(array_key_first($refundMethods)), account: @js((string) ($methodAccounts[array_key_first($refundMethods)] ?? '')), defaults: @js($methodAccounts) }">
+                            @csrf
+                            <p class="text-sm font-semibold text-slate-900">Give money back</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label for="refund_amount" class="label">Amount</label>
+                                    <input id="refund_amount" name="amount" type="number" step="0.01" min="0.01" max="{{ $refundable }}" required
+                                           value="{{ old('amount', $refundable) }}" class="input">
+                                </div>
+                                <div>
+                                    <label for="refund_method" class="label">Method</label>
+                                    <select id="refund_method" name="method" x-model="method" @change="account = String(defaults[method] ?? account)" class="input">
+                                        @foreach($refundMethods as $key => $label)
+                                            <option value="{{ $key }}">{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="refund_account" class="label">Paid out of</label>
+                                <select id="refund_account" name="account_id" x-model="account" required class="input">
+                                    <option value="">Choose account</option>
+                                    @foreach($accounts as $account)
+                                        <option value="{{ $account->id }}">{{ $account->name }} ({{ \App\Support\Money::format($balances[$account->id] ?? 0, false) }})</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            @if($openReturns->isNotEmpty())
+                                <div>
+                                    <label for="refund_return" class="label">Against a return <span class="text-slate-400">(optional)</span></label>
+                                    <select id="refund_return" name="order_return_id" class="input">
+                                        <option value="">Not linked to a return</option>
+                                        @foreach($openReturns as $received)
+                                            <option value="{{ $received->id }}">{{ $received->number }} — {{ \App\Support\Money::format((float) $received->refund_total) }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endif
+                            <div>
+                                <label for="refund_reference" class="label">Transaction ID <span class="text-slate-400">(optional)</span></label>
+                                <input id="refund_reference" name="reference" type="text" maxlength="100" value="{{ old('reference') }}" class="input font-mono">
+                            </div>
+                            <div>
+                                <label for="refund_note" class="label">Note <span class="text-slate-400">(optional)</span></label>
+                                <input id="refund_note" name="note" type="text" maxlength="500" value="{{ old('note') }}" class="input" placeholder="e.g. Returned, money given back in cash">
+                            </div>
+                            <button type="submit" class="btn-secondary w-full text-rose-600">Refund @money($refundable)</button>
+                        </form>
+                    @endif
+                </section>
+            @endif
 
             <section class="card p-6">
                 <div class="flex items-center justify-between gap-2">

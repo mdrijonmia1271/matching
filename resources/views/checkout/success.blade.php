@@ -18,7 +18,7 @@
             <div class="mt-6 flex flex-wrap justify-center gap-2 text-xs">
                 <span class="rounded-full px-3 py-1 font-semibold {{ $order->statusColor() }}">{{ ucfirst($order->status) }}</span>
                 <span class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
-                    {{ $order->payment_method === 'cod' ? 'Cash on delivery' : 'Online payment' }} &middot; {{ $order->payment_status_label }}
+                    {{ $order->payment_method_label }} &middot; {{ $order->payment_status_label }}
                 </span>
             </div>
         </div>

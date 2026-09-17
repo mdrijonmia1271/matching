@@ -22,7 +22,7 @@
                                 <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $order->statusColor() }}">{{ $order->status_label }}</span>
                                 @if($order->payment_status === 'paid')
                                     <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">Paid</span>
-                                @elseif($order->payment_method !== 'cod')
+                                @elseif($order->payment_method !== 'cod' && ! $order->isPosSale())
                                     <span class="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-800">{{ $order->payment_status_label }}</span>
                                 @endif
                             </div>
@@ -36,7 +36,7 @@
                         <div class="flex gap-2">
                             <a href="{{ route('orders.show', $order) }}" class="btn-secondary">Details</a>
 
-                            @if($order->payment_method !== 'cod' && $order->payment_status !== 'paid' && $order->status !== 'cancelled')
+                            @if($order->canPayOnline())
                                 <form method="POST" action="{{ route('orders.pay', $order) }}">
                                     @csrf
                                     <button class="btn-primary">Pay now</button>

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Review;
@@ -33,6 +35,9 @@ class HomeController extends Controller
             'tabs' => $this->bestSellerTabs($featured, $latest, $deals),
             'stats' => $this->stats(),
             'gallery' => $this->cards()->inRandomOrder()->take(5)->get(),
+            // Active brands only, and only those with a logo: the strip shows nothing
+            // else. Ordered Z to A, so the strip does not always open on the same name.
+            'brands' => Brand::active()->whereNotNull('logo')->orderByDesc('name')->take(12)->get(),
         ]);
     }
 
@@ -92,7 +97,7 @@ class HomeController extends Controller
 
         return [
             ['label' => 'Product', 'value' => number_format(Product::active()->count()), 'icon' => 'box'],
-            ['label' => 'Followers', 'value' => number_format(User::count()), 'icon' => 'users'],
+            ['label' => 'Followers', 'value' => number_format(Customer::count()), 'icon' => 'users'],
             ['label' => 'Monthly Sales', 'value' => number_format($delivered), 'icon' => 'chart'],
             ['label' => 'Happy Customers', 'value' => ($rated > 0 ? round($rated / 5 * 100) : 100) . '%', 'icon' => 'user'],
         ];

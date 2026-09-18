@@ -136,36 +136,32 @@
 {{-- ============================================================
      BRANDS
      ============================================================ --}}
-<section class="df-brands">
-    <div class="df-wrap df-brands__row">
-        <span class="df-brand">
-            <em>INTERIOR</em>
-            <b>academia</b>
-            <em>DESIGN</em>
-        </span>
-        <span class="df-brand df-brand--seal">
-            <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="1.6">
-                <circle cx="48" cy="48" r="44"/><circle cx="48" cy="48" r="37" stroke-dasharray="3 4"/>
-            </svg>
-            <i>S</i>
-        </span>
-        <span class="df-brand df-brand--diamond">
-            <svg viewBox="0 0 120 80" fill="none" stroke="currentColor" stroke-width="1.6">
-                <path d="M60 6 114 40 60 74 6 40 60 6Z"/>
-            </svg>
-            <i>DESIGN STUDIO</i>
-        </span>
-        <span class="df-brand df-brand--boxed">
-            <svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1" y="1" width="32" height="32" rx="3"/></svg>
-            <i>B</i>
-            <span><b>BRAND</b><em>PRODUCTS CO.</em></span>
-        </span>
-        <span class="df-brand df-brand--cp">
-            <i>C|P</i>
-            <span><b>CALEY</b><b>PERCE</b></span>
-        </span>
-    </div>
-</section>
+@if($brands->isNotEmpty())
+    @php
+        // The strip scrolls one whole group's width and snaps back, so the loop is
+        // seamless only when both groups are identical. With few brands the group is
+        // repeated until it is wide enough to fill the screen. Speed follows the
+        // width, so two logos do not race past while twelve crawl.
+        $perGroup = max(6, $brands->count());
+        $marquee = collect()->pad((int) ceil($perGroup / $brands->count()), null)
+            ->flatMap(fn () => $brands)->take($perGroup);
+        $seconds = $perGroup * 4;
+    @endphp
+
+    <section class="df-brands" aria-label="Brands we carry">
+        <div class="df-brands__viewport" style="--df-marquee: {{ $seconds }}s">
+            @foreach([false, true] as $duplicate)
+                <div class="df-brands__group" @if($duplicate) aria-hidden="true" @endif>
+                    @foreach($marquee as $brand)
+                        <span class="df-brand">
+                            <img src="{{ $brand->logo_url }}" alt="{{ $duplicate ? '' : $brand->name }}" loading="lazy">
+                        </span>
+                    @endforeach
+                </div>
+            @endforeach
+        </div>
+    </section>
+@endif
 
 {{-- ============================================================
      INSTAGRAM COMMUNITY

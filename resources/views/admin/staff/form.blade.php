@@ -14,7 +14,7 @@
         <section class="card p-6">
             <h2 class="text-base font-bold text-slate-900">Account</h2>
 
-            <div class="mt-5 grid gap-4 sm:grid-cols-2">
+            <div class="mt-5 grid gap-4 sm:grid-cols-2" x-data="{ show: false }">
                 <div class="sm:col-span-2">
                     <label for="name" class="label">Full name</label>
                     <input id="name" name="name" type="text" required maxlength="120" value="{{ old('name', $member->name) }}" class="input">
@@ -29,12 +29,40 @@
                 </div>
                 <div>
                     <label for="password" class="label">{{ $member->exists ? 'New password' : 'Password' }}</label>
-                    <input id="password" name="password" type="password" @required(! $member->exists) autocomplete="new-password" class="input">
+                    <div class="relative">
+                        <input id="password" name="password" x-bind:type="show ? 'text' : 'password'"
+                               @required(! $member->exists) autocomplete="new-password" class="input pr-11">
+                        <button type="button" @click="show = ! show" tabindex="-1"
+                                :aria-label="show ? 'Hide password' : 'Show password'" :aria-pressed="show"
+                                class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 transition hover:text-slate-700">
+                            <svg x-show="! show" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3.2"/>
+                            </svg>
+                            <svg x-show="show" x-cloak class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <path stroke-linecap="round" d="M4 4l16 16M9.9 5.9A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.3 4.1M6.6 7.9A17 17 0 0 0 2.5 12S6 18.5 12 18.5c1 0 1.9-.2 2.7-.5"/>
+                                <path d="M9.9 10.1a3.2 3.2 0 0 0 4.3 4.3"/>
+                            </svg>
+                        </button>
+                    </div>
                     <p class="mt-1 text-xs text-slate-500">At least 8 characters with letters and numbers.{{ $member->exists ? ' Leave blank to keep the current password.' : '' }}</p>
                 </div>
                 <div>
                     <label for="password_confirmation" class="label">Confirm password</label>
-                    <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" class="input">
+                    <div class="relative">
+                        <input id="password_confirmation" name="password_confirmation" x-bind:type="show ? 'text' : 'password'"
+                               autocomplete="new-password" class="input pr-11">
+                        <button type="button" @click="show = ! show" tabindex="-1"
+                                :aria-label="show ? 'Hide password' : 'Show password'" :aria-pressed="show"
+                                class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 transition hover:text-slate-700">
+                            <svg x-show="! show" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3.2"/>
+                            </svg>
+                            <svg x-show="show" x-cloak class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <path stroke-linecap="round" d="M4 4l16 16M9.9 5.9A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.3 4.1M6.6 7.9A17 17 0 0 0 2.5 12S6 18.5 12 18.5c1 0 1.9-.2 2.7-.5"/>
+                                <path d="M9.9 10.1a3.2 3.2 0 0 0 4.3 4.3"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>

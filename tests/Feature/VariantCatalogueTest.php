@@ -10,6 +10,8 @@ use App\Models\StockMovement;
 use App\Services\CartService;
 use App\Services\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -289,7 +291,12 @@ class VariantCatalogueTest extends TestCase
         $this->actingAs($admin)->get(route('admin.stock.index', ['variant' => $blackM->id]))->assertOk()->assertSee($blackM->sku);
         $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk();
 
-        $this->actingAs($admin)->post(route('admin.brands.store'), ['name' => 'Aarong'])->assertSessionHas('success');
+        // Faked so the brand logo this posts does not land in the real storage folder.
+        Storage::fake('public');
+
+        $this->actingAs($admin)->post(route('admin.brands.store'), [
+            'name' => 'Aarong', 'logo' => UploadedFile::fake()->image('aarong.png', 240, 80),
+        ])->assertSessionHas('success');
         $this->actingAs($admin)->get(route('admin.brands.index'))->assertOk()->assertSee('Aarong');
 
         $this->actingAs($admin)->getJson(route('admin.variants.search', ['q' => self::EAN]))

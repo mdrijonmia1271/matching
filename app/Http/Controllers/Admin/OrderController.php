@@ -50,7 +50,7 @@ class OrderController extends Controller implements HasMiddleware
 
         return view('admin.orders.index', [
             'orders' => $orders,
-            'statusCounts' => Order::selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status'),
+            'statusCounts' => Order::selectRaw('status, COUNT(*) as orders_count')->groupBy('status')->pluck('orders_count', 'status'),
         ]);
     }
 

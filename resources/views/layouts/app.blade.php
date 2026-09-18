@@ -8,7 +8,7 @@
     <meta name="description" content="@yield('meta_description', 'Matching - women&rsquo;s clothing in Bangladesh: sarees, salwar kameez, kurtis, lehengas, abayas, hijabs and shawls with cash on delivery.')">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&family=Parisienne&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&family=Noto+Sans+Bengali:wght@600;700&family=Parisienne&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/css/dream-fashion.css', 'resources/js/app.js'])
     <style>[x-cloak]{display:none!important}</style>
 </head>
@@ -135,11 +135,20 @@
      ============================================================ --}}
 <footer class="df-foot">
     <div class="df-wrap df-foot__grid">
-        <div class="df-foot__brand">
-            <a href="{{ route('home') }}" class="df-logo df-logo--foot"><x-store-logo /></a>
+        <div class="df-foot__brand" style="margin-top: -25px;">
+            {{-- <a href="{{ route('home') }}" class="df-logo df-logo--foot"><x-store-logo /></a> --}}
+            <p class="df-pay__title">You Can Pay By</p>
             <div class="df-pay" aria-label="Accepted payments">
-                @foreach(['VISA' => '#1a1f71', 'MC' => '#eb001b', 'AMEX' => '#2e77bc', 'PP' => '#003087', 'bKash' => '#e2136e', 'COD' => '#5a5f33'] as $label => $tone)
-                    <span class="df-pay__card" style="--tone:{{ $tone }}">{{ $label }}</span>
+                @foreach(config('shop.payment_badges', []) as $badge)
+                    @php $logo = public_path('images/payments/' . $badge['image']); @endphp
+                    <span class="df-pay__card">
+                        @if(is_file($logo))
+                            <img src="{{ asset('images/payments/' . $badge['image']) }}" alt="{{ $badge['name'] }}" loading="lazy">
+                        @else
+                            {{-- No file dropped in: fall back to the mark drawn in markup. --}}
+                            @include('partials.payment-mark', ['key' => $badge['key'], 'name' => $badge['name']])
+                        @endif
+                    </span>
                 @endforeach
             </div>
         </div>
@@ -171,7 +180,13 @@
 
     <div class="df-foot__bar">
         <div class="df-wrap df-foot__bar-row">
-            <p>&copy; {{ date('Y') }} {{ $storeName }} Design Themes</p>
+            <p>
+                &copy; {{ date('Y') }} {{ $storeName }} Design Themes
+                <span class="df-foot__by">
+                    Developed by
+                    <a href="https://zarosoft.com" target="_blank" rel="noopener noreferrer">zarosoft.com</a>
+                </span>
+            </p>
             <nav class="df-foot__bar-links">
                 <a href="{{ route('cart.index') }}">Contact</a>
                 <a href="{{ route('shop.index') }}">T &amp; C</a>

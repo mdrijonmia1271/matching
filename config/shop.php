@@ -33,6 +33,21 @@ return [
         'invoice_note' => 'Thank you for shopping with us.',
     ],
 
+    /*
+     * Logos for the "You can pay by" block in the footer, in the order shown.
+     * `key` picks a mark drawn in partials/payment-mark.blade.php, so the block
+     * looks right out of the box. Drop a real logo at public/images/payments/<image>
+     * and that file is used instead — no code change needed.
+     */
+    'payment_badges' => [
+        ['key' => 'visa', 'name' => 'Visa', 'image' => 'visa.svg'],
+        ['key' => 'nagad', 'name' => 'Nagad', 'image' => 'nagad.svg'],
+        ['key' => 'bkash', 'name' => 'bKash', 'image' => 'bkash.svg'],
+        ['key' => 'amex', 'name' => 'American Express', 'image' => 'amex.png'],
+        ['key' => 'mastercard', 'name' => 'Mastercard', 'image' => 'mastercard.svg'],
+        ['key' => 'rocket', 'name' => 'Rocket', 'image' => 'rocket.svg'],
+    ],
+
     /* Payment methods the store can accept. `cod` and `online` are storefront checkout options. */
     'payment_methods' => [
         'cash' => 'Cash',

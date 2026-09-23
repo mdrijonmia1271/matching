@@ -96,4 +96,142 @@ class SettingController extends Controller implements HasMiddleware
 
         return back()->with('success', $new ? 'Settings saved.' : 'Nothing changed.');
     }
+
+    /** How many pictures the hero can fade through. */
+    public const HERO_IMAGE_SLOTS = 3;
+
+    /** The home page hero: pictures, headline, script line and the offer card. */
+    public function hero()
+    {
+        return view('admin.settings.hero', [
+            'settings' => $this->settings->all(),
+            'slots' => self::HERO_IMAGE_SLOTS,
+        ]);
+    }
+
+    public function updateHero(Request $request)
+    {
+        $data = $request->validate([
+            'hero_title' => ['required', 'string', 'max:80'],
+            'hero_subtitle' => ['nullable', 'string', 'max:80'],
+            'hero_offer_enabled' => ['nullable', 'boolean'],
+            'hero_offer_kicker' => ['nullable', 'string', 'max:30'],
+            'hero_offer_value' => ['nullable', 'string', 'max:10'],
+            'hero_offer_suffix' => ['nullable', 'string', 'max:6'],
+            'hero_offer_off' => ['nullable', 'string', 'max:20'],
+            'hero_offer_label' => ['nullable', 'string', 'max:40'],
+            'hero_offer_button' => ['nullable', 'string', 'max:30'],
+            'hero_offer_link' => ['nullable', 'string', 'max:300'],
+            'hero_images' => ['nullable', 'array', 'max:' . self::HERO_IMAGE_SLOTS],
+            'hero_images.*' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:3072'],
+            'remove_hero_images' => ['nullable', 'array'],
+        ]);
+
+        // The card is only worth showing with a figure on it.
+        if ($request->boolean('hero_offer_enabled') && ! filled($data['hero_offer_value'] ?? null)) {
+            return back()->withInput()->with('error', 'Give the offer a discount value, or turn the offer card off.');
+        }
+
+        $values = [
+            'hero_offer_enabled' => $request->boolean('hero_offer_enabled'),
+            'hero_images' => $this->heroImages($request),
+        ];
+
+        foreach (['hero_title', 'hero_subtitle', 'hero_offer_kicker', 'hero_offer_value', 'hero_offer_suffix',
+            'hero_offer_off', 'hero_offer_label', 'hero_offer_button', 'hero_offer_link'] as $key) {
+            $values[$key] = trim((string) ($data[$key] ?? ''));
+        }
+
+        $wasStored = (array) $this->settings->get('hero_images', []);
+
+        [$old, $new] = $this->settings->set($values);
+
+        // Only once the new list is saved, so a failed write cannot leave the
+        // hero pointing at files that are already gone.
+        foreach (array_diff($wasStored, $values['hero_images']) as $dropped) {
+            Storage::disk('public')->delete($dropped);
+        }
+
+        if ($new) {
+            AuditLogger::log('settings', 'updated', null, 'Hero section updated: ' . implode(', ', array_keys($new)), $old, $new);
+        }
+
+        return back()->with('success', $new ? 'Hero section saved.' : 'Nothing changed.');
+    }
+
+    /**
+     * The hero pictures after this request: each slot keeps what it had unless
+     * a new file replaces it or the remove box is ticked. Gaps are closed up so
+     * the storefront never fades to an empty slide.
+     *
+     * @return array<int, string>
+     */
+    protected function heroImages(Request $request): array
+    {
+        $current = (array) $this->settings->get('hero_images', []);
+        $kept = [];
+
+        for ($slot = 0; $slot < self::HERO_IMAGE_SLOTS; $slot++) {
+            $existing = $current[$slot] ?? null;
+
+            if ($file = $request->file('hero_images.' . $slot)) {
+                $kept[] = $file->store('settings', 'public');
+            } elseif ($existing && ! $request->boolean('remove_hero_images.' . $slot)) {
+                $kept[] = $existing;
+            }
+        }
+
+        return $kept;
+    }
+
+    /** The four counters under the categories on the home page. */
+    public function stats()
+    {
+        return view('admin.settings.stats', [
+            'settings' => $this->settings->all(),
+            'sources' => config('shop.home_stat_sources'),
+            'icons' => config('shop.home_stat_icons'),
+        ]);
+    }
+
+    public function updateStats(Request $request)
+    {
+        $data = $request->validate([
+            'home_stats_enabled' => ['nullable', 'boolean'],
+            'stats' => ['required', 'array', 'min:1', 'max:6'],
+            'stats.*.label' => ['required', 'string', 'max:40'],
+            'stats.*.icon' => ['required', Rule::in(array_keys(config('shop.home_stat_icons')))],
+            'stats.*.source' => ['required', Rule::in(array_keys(config('shop.home_stat_sources')))],
+            'stats.*.value' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $tiles = [];
+
+        foreach ($data['stats'] as $tile) {
+            $value = trim((string) ($tile['value'] ?? ''));
+
+            // A typed tile with nothing typed in it would print an empty box.
+            if ($tile['source'] === 'manual' && $value === '') {
+                return back()->withInput()->with('error', 'Tile "' . $tile['label'] . '" is set to fixed text, so give it something to show.');
+            }
+
+            $tiles[] = [
+                'label' => trim($tile['label']),
+                'icon' => $tile['icon'],
+                'source' => $tile['source'],
+                'value' => $value,
+            ];
+        }
+
+        [$old, $new] = $this->settings->set([
+            'home_stats_enabled' => $request->boolean('home_stats_enabled'),
+            'home_stats' => $tiles,
+        ]);
+
+        if ($new) {
+            AuditLogger::log('settings', 'updated', null, 'Stats strip updated: ' . implode(', ', array_keys($new)), $old, $new);
+        }
+
+        return back()->with('success', $new ? 'Stats strip saved.' : 'Nothing changed.');
+    }
 }

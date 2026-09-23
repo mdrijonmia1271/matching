@@ -70,6 +70,7 @@ class Order extends Model
         'shipping_address', 'shipping_city', 'note', 'admin_note', 'courier_name', 'tracking_number',
         'subtotal', 'discount', 'shipping_cost', 'total', 'paid_amount', 'refunded_amount', 'coupon_code', 'status', 'payment_method',
         'payment_status', 'paid_at', 'confirmed_at', 'shipped_at', 'delivered_at', 'cancelled_at',
+        'expected_at', 'stock_taken_at',
     ];
 
     protected function casts(): array
@@ -86,6 +87,8 @@ class Order extends Model
             'shipped_at' => 'datetime',
             'delivered_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'expected_at' => 'datetime',
+            'stock_taken_at' => 'datetime',
         ];
     }
 
@@ -200,6 +203,36 @@ class Order extends Model
         return $this->channel === 'pos';
     }
 
+    /** Booked in advance: paid for now, handed over later. */
+    public function isAdvanceOrder(): bool
+    {
+        return $this->channel === 'advance';
+    }
+
+    /**
+     * Whether the goods have actually left the shelf yet.
+     *
+     * Online and counter sales take stock as they are created; an advance order
+     * takes it when it is delivered, because the goods may not even be in yet.
+     * Returns and restocking both hang off this, so nothing is put back that
+     * never went out.
+     */
+    public function hasStockLeft(): bool
+    {
+        return $this->stock_taken_at !== null;
+    }
+
+    /** Booked, paid something, but the goods are still on the shelf. */
+    public function isAwaitingFulfilment(): bool
+    {
+        return $this->isAdvanceOrder() && ! $this->hasStockLeft() && in_array($this->status, self::SALE_STATUSES, true);
+    }
+
+    public function scopeAdvance($query): void
+    {
+        $query->where('channel', 'advance');
+    }
+
     /**
      * Whether the customer can still settle this order through the online
      * gateway. A counter sale never can: its money is taken at the till.
@@ -207,6 +240,7 @@ class Order extends Model
     public function canPayOnline(): bool
     {
         return ! $this->isPosSale()
+            && ! $this->isAdvanceOrder()
             && $this->payment_method !== 'cod'
             && $this->payment_status !== 'paid'
             && $this->status !== 'cancelled';
@@ -217,6 +251,7 @@ class Order extends Model
         return match ($this->payment_method) {
             'cod' => 'Cash on delivery',
             'pos' => 'Paid at the counter',
+            'advance' => 'Advance booking',
             'online' => 'Online payment',
             default => config('shop.payment_methods')[$this->payment_method] ?? 'Online payment',
         };

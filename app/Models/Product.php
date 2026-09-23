@@ -11,6 +11,9 @@ class Product extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /** How many gallery images a product may carry, beside the main image. */
+    public const MAX_GALLERY_IMAGES = 6;
+
     /**
      * Stock lives on variants. `products.stock` is a cached total of the active
      * variants' stock, kept current by StockService, for fast shop listings.

@@ -40,6 +40,13 @@ class ReturnService
                     . ', so nothing has gone out to come back. Cancel it instead.');
             }
 
+            // An advance order keeps its goods on the shelf until it is delivered, so
+            // until then there is nothing to take back — cancelling is the way out.
+            if (! $locked->hasStockLeft()) {
+                throw new RuntimeException('Order ' . $locked->order_number . ' is booked in advance and has not been handed over yet, '
+                    . 'so there is nothing to return. Cancel it instead.');
+            }
+
             $lines = $this->checkLines($locked, $items);
 
             $return = OrderReturn::create([

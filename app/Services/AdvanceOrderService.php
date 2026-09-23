@@ -12,31 +12,37 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * Selling over the counter.
+ * Advance orders: the customer books goods now and takes them later.
  *
- * A counter sale is an order like any other — the same stock ledger, the same
- * payment records, the same account ledger — with `channel` set to `pos`. It is
- * created as delivered, because the customer walks out with the goods.
+ * A booking is an order like any other — same payments, same account ledger,
+ * same customer due, same invoice — with `channel` set to `advance`. Two things
+ * make it different:
  *
- * Prices always come from the variant, never from the form.
+ * 1. **Stock does not move here.** The goods may not even be in the shop yet,
+ *    so `stock_taken_at` stays null and the shelf is only touched when the order
+ *    reaches `delivered` (OrderService::fulfil). Cancelling before then puts
+ *    nothing back, because nothing went out.
+ * 2. **The price is typed in, not read off the variant.** A booking is a deal
+ *    struck with the customer, often before today's price is even set. The
+ *    variant's current price is offered as the default; whatever is agreed is
+ *    what the order records.
+ *
+ * It is created as `confirmed`: the shop has accepted the booking and taken
+ * money for it, so it counts as a sale and whatever is unpaid is a real due.
  */
-class PosService
+class AdvanceOrderService
 {
-    /** A sale with no customer record behind it. */
-    public const WALK_IN = 'Walk-in customer';
-
     public function __construct(
-        protected StockService $stock,
         protected PaymentService $payments,
         protected CustomerService $customers,
     ) {}
 
     /**
-     * Ring up a sale: stock out, order, payments, all or nothing.
+     * Book an order, and record whatever was paid up front.
      *
      * @param  array<string, mixed>  $data
      */
-    public function sell(array $data): Order
+    public function book(array $data): Order
     {
         return DB::transaction(function () use ($data) {
             $lines = $this->priceLines($data['items'] ?? []);
@@ -48,40 +54,40 @@ class PosService
             }
 
             if ($discount > $subtotal) {
-                throw new RuntimeException('The discount (' . Money::format($discount) . ') is more than the ' . Money::format($subtotal) . ' being sold.');
+                throw new RuntimeException('The discount (' . Money::format($discount) . ') is more than the '
+                    . Money::format($subtotal) . ' being booked.');
             }
 
             $total = round($subtotal - $discount, 2);
-            $customer = $this->resolveCustomer($data);
-            $payments = $this->checkPayments($data['payments'] ?? [], $total);
-            $taken = round(array_sum(array_column($payments, 'amount')), 2);
 
-            // A walk-in has no record to collect from, so the money cannot be left owing.
-            if (! $customer && $taken < $total) {
-                throw new RuntimeException('A walk-in sale must be paid in full. Choose a customer if '
-                    . Money::format(round($total - $taken, 2)) . ' is to be left owing.');
-            }
+            // The whole point of a booking is that the rest is owed, so there has to be
+            // somebody on record to owe it. A walk-in cannot be chased for the balance.
+            $customer = $this->resolveCustomer($data)
+                ?? throw new RuntimeException('An advance order needs a customer: the rest of the money is owed until the goods are handed over.');
+
+            $taken = $this->checkPayments($data['payments'] ?? [], $total);
 
             $order = Order::create([
-                'user_id' => $customer?->user_id,
-                'customer_id' => $customer?->id,
-                'channel' => 'pos',
-                'customer_name' => $customer?->name ?? self::WALK_IN,
-                'customer_email' => $customer?->email,
-                'customer_phone' => $customer?->phone ?? '',
-                'shipping_address' => null,
+                'user_id' => $customer->user_id,
+                'customer_id' => $customer->id,
+                'channel' => 'advance',
+                'customer_name' => $customer->name,
+                'customer_email' => $customer->email,
+                'customer_phone' => $customer->phone ?? '',
+                'shipping_address' => $data['shipping_address'] ?? null,
+                'shipping_city' => $data['shipping_city'] ?? null,
                 'note' => $data['note'] ?? null,
+                'expected_at' => $data['expected_at'] ?? null,
                 'subtotal' => $subtotal,
                 'discount' => $discount,
                 'shipping_cost' => 0,
                 'total' => $total,
-                'payment_method' => 'pos',
-                // The customer has the goods in hand, so the sale is finished the moment it is rung up.
-                'status' => 'delivered',
+                'payment_method' => 'advance',
+                'status' => 'confirmed',
                 'payment_status' => 'unpaid',
                 'confirmed_at' => now(),
-                'delivered_at' => now(),
-                'stock_taken_at' => now(),
+                // Deliberately null: the goods stay on the shelf until delivery.
+                'stock_taken_at' => null,
             ]);
 
             foreach ($lines as $line) {
@@ -98,33 +104,32 @@ class PosService
                     'quantity' => $line['quantity'],
                     'subtotal' => $line['subtotal'],
                 ]);
-
-                // allowNegative stays null on purpose: the counter follows Settings → "Allow negative stock".
-                $this->stock->move($variant, 'out', $line['quantity'], 'pos_sale', null, $order);
             }
 
             $order->statusHistories()->create([
                 'from_status' => null,
-                'to_status' => 'delivered',
+                'to_status' => 'confirmed',
                 'user_id' => Auth::id(),
-                'note' => 'Sold at the counter',
+                'note' => 'Advance order booked',
             ]);
 
-            foreach ($payments as $payment) {
+            foreach ($taken as $payment) {
                 $this->payments->record($order, $payment['amount'], $payment['account'], $payment['method'],
-                    'Counter payment');
+                    'Advance payment');
             }
 
             $order->refresh();
 
-            AuditLogger::log('orders', 'pos_sale', $order,
-                sprintf('Counter sale %s — %s from %s', $order->order_number, Money::format($total), $order->customer_name),
+            AuditLogger::log('orders', 'advance_booked', $order,
+                sprintf('Advance order %s — %s booked by %s, %s paid up front',
+                    $order->order_number, Money::format($total), $order->customer_name, Money::format((float) $order->paid_amount)),
                 new: [
                     'customer' => $order->customer_name,
                     'items' => count($lines),
                     'total' => $total,
-                    'paid' => (float) $order->paid_amount,
+                    'advance' => (float) $order->paid_amount,
                     'due' => $order->due_amount,
+                    'expected' => $order->expected_at?->format('Y-m-d'),
                 ]);
 
             return $order->load('items');
@@ -132,25 +137,23 @@ class PosService
     }
 
     /**
-     * The customer behind the sale: an existing record, a new one from the name
-     * and phone typed at the till, or nobody at all for a walk-in.
+     * The customer behind the booking: an existing record, or a new one from the
+     * name and phone typed on the form.
      *
      * @param  array<string, mixed>  $data
      */
     protected function resolveCustomer(array $data): ?Customer
     {
         if (! empty($data['customer_id'])) {
-            $customer = Customer::find($data['customer_id'])
+            return Customer::find($data['customer_id'])
                 ?? throw new RuntimeException('That customer no longer exists. Search for them again.');
-
-            return $customer;
         }
 
         if (blank($data['customer_name'] ?? null)) {
             return null;
         }
 
-        // The same matching the website uses, so a phone never ends up on two records.
+        // The same matching the website and the till use, so one phone means one record.
         return $this->customers->findOrCreateForCheckout(
             null,
             (string) $data['customer_name'],
@@ -159,7 +162,10 @@ class PosService
     }
 
     /**
-     * Price each line from the live variant and check it can be sold.
+     * Check each line and work out what it comes to.
+     *
+     * Stock is not checked at all: booking goods the shop has not got yet is
+     * exactly what an advance order is for.
      *
      * @param  array<int, array<string, mixed>>  $rows
      * @return array<int, array<string, mixed>>
@@ -169,7 +175,7 @@ class PosService
         $rows = array_values(array_filter($rows, fn ($row) => (int) ($row['variant_id'] ?? 0) > 0 && (int) ($row['quantity'] ?? 0) > 0));
 
         if (! $rows) {
-            throw new RuntimeException('Scan or search for at least one product to sell.');
+            throw new RuntimeException('Add at least one product to the booking.');
         }
 
         $variants = ProductVariant::with('product')->whereIn('id', array_column($rows, 'variant_id'))->get()->keyBy('id');
@@ -180,24 +186,32 @@ class PosService
             $product = $variant?->product;
 
             if (! $variant || ! $product) {
-                throw new RuntimeException('One of the scanned products no longer exists.');
+                throw new RuntimeException('One of the products on the booking no longer exists.');
             }
 
             if (! $variant->is_active || $product->trashed() || ! $product->is_active) {
-                throw new RuntimeException($variant->full_name . ' is not on sale any more. Remove it from the sale.');
+                throw new RuntimeException($variant->full_name . ' is not on sale any more. Remove it from the booking.');
             }
 
             $quantity = (int) $row['quantity'];
 
-            // The same barcode scanned twice is one line, so stock leaves once per unit.
+            // A blank price falls back to today's price; zero is allowed, for an item thrown in.
+            $price = ($row['price'] ?? '') === ''
+                ? round((float) $variant->current_price, 2)
+                : round((float) $row['price'], 2);
+
+            if ($price < 0) {
+                throw new RuntimeException('A price cannot be negative.');
+            }
+
+            // The same product added twice is one line, so the quantity adds up
+            // instead of the second row quietly replacing the first.
             if (isset($lines[$variant->id])) {
                 $lines[$variant->id]['quantity'] += $quantity;
                 $lines[$variant->id]['subtotal'] = round($lines[$variant->id]['quantity'] * $lines[$variant->id]['price'], 2);
 
                 continue;
             }
-
-            $price = round((float) $variant->current_price, 2);
 
             $lines[$variant->id] = [
                 'variant' => $variant,
@@ -211,8 +225,8 @@ class PosService
     }
 
     /**
-     * Check the split before anything is recorded: every part must be a real
-     * active account, and together they cannot come to more than the sale.
+     * Check the advance before anything is recorded: real active accounts, and
+     * never more than the booking comes to.
      *
      * @param  array<int, array<string, mixed>>  $rows
      * @return array<int, array{amount: float, account: Account, method: string}>
@@ -231,7 +245,7 @@ class PosService
             }
 
             $account = $accounts->get((int) ($row['account_id'] ?? 0))
-                ?? throw new RuntimeException('Choose the account each payment goes into.');
+                ?? throw new RuntimeException('Choose the account each advance payment goes into.');
 
             if (! $account->is_active) {
                 throw new RuntimeException($account->name . ' is inactive. Choose another account.');
@@ -242,8 +256,8 @@ class PosService
         }
 
         if ($taken > $total) {
-            throw new RuntimeException('The payment (' . Money::format($taken) . ') is more than the '
-                . Money::format($total) . ' total. Give the difference back as change instead of recording it.');
+            throw new RuntimeException('The advance (' . Money::format($taken) . ') is more than the '
+                . Money::format($total) . ' the booking comes to.');
         }
 
         return $payments;

@@ -6,9 +6,11 @@ use App\Http\Controllers\Admin\VariantLookupController;
 use App\Http\Controllers\Admin\BarcodeLabelController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\AccountController;
+use App\Http\Controllers\Admin\AdvanceOrderController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\CustomerDueController;
 use App\Http\Controllers\Admin\CustomerPaymentController;
+use App\Http\Controllers\Admin\NewsletterController as AdminNewsletterController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\RefundController;
@@ -30,6 +32,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
@@ -45,6 +48,15 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+Route::post('/newsletter', [NewsletterController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('newsletter.store');
+
+Route::view('/terms', 'pages.terms')->name('terms');
+Route::view('/transparency', 'pages.transparency')->name('transparency');
+Route::view('/privacy-policy', 'pages.privacy')->name('privacy');
+Route::view('/contact', 'pages.contact')->name('contact');
 
 Route::get('/shop', [ShopController::class, 'index'])->name('shop.index');
 Route::get('/product/{product}', [ShopController::class, 'show'])->name('shop.show');
@@ -175,6 +187,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::patch('customers/{customer}/restore', [CustomerController::class, 'restore'])
         ->withTrashed()->name('customers.restore');
     Route::post('customers/{customer}/payments', [CustomerPaymentController::class, 'store'])->name('customers.payments.store');
+    // Export and create come before nothing else here, but keep them grouped with their screen.
+    Route::get('advance-orders', [AdvanceOrderController::class, 'index'])->name('advance-orders.index');
+    Route::get('advance-orders/create', [AdvanceOrderController::class, 'create'])->name('advance-orders.create');
+    Route::get('advance-orders/export', [AdvanceOrderController::class, 'export'])->name('advance-orders.export');
+    Route::post('advance-orders', [AdvanceOrderController::class, 'store'])->name('advance-orders.store');
+
     Route::get('customer-dues', [CustomerDueController::class, 'index'])->name('customer-dues.index');
     Route::get('customer-dues/export', [CustomerDueController::class, 'export'])->name('customer-dues.export');
 
@@ -202,11 +220,21 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::resource('coupons', AdminCouponController::class)->except('show');
 
+    // Export is registered before the toggle routes so "export" is not read as a subscriber id.
+    Route::get('newsletter/export', [AdminNewsletterController::class, 'export'])->name('newsletter.export');
+    Route::get('newsletter', [AdminNewsletterController::class, 'index'])->name('newsletter.index');
+    Route::patch('newsletter/{newsletter}', [AdminNewsletterController::class, 'toggle'])->whereNumber('newsletter')->name('newsletter.toggle');
+    Route::delete('newsletter/{newsletter}', [AdminNewsletterController::class, 'destroy'])->whereNumber('newsletter')->name('newsletter.destroy');
+
     Route::resource('staff', StaffController::class)->except('show');
     Route::resource('roles', RoleController::class)->except('show');
 
     Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+    Route::get('settings/hero', [SettingController::class, 'hero'])->name('settings.hero.edit');
+    Route::put('settings/hero', [SettingController::class, 'updateHero'])->name('settings.hero.update');
+    Route::get('settings/stats', [SettingController::class, 'stats'])->name('settings.stats.edit');
+    Route::put('settings/stats', [SettingController::class, 'updateStats'])->name('settings.stats.update');
 
     Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity.index');
 });

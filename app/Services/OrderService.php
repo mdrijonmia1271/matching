@@ -72,6 +72,8 @@ class OrderService
                 'payment_method' => $data['payment_method'],
                 'status' => 'pending',
                 'payment_status' => 'unpaid',
+                // The stock leaves with the order, so returns and cancellations know there is something to put back.
+                'stock_taken_at' => now(),
             ]);
 
             foreach ($cart->items as $item) {
@@ -135,18 +137,71 @@ class OrderService
         }
     }
 
-    /** Put stock back when an order is cancelled. */
+    /**
+     * Put stock back when an order is cancelled.
+     *
+     * Only an order whose goods actually left has anything to give back: an
+     * advance order cancelled before delivery never took stock, so restocking
+     * it would invent units that were never sold.
+     */
     public function restock(Order $order): void
     {
         DB::transaction(function () use ($order) {
-            foreach ($order->items as $item) {
+            $locked = Order::with('items')->lockForUpdate()->findOrFail($order->id);
+
+            if (! $locked->hasStockLeft()) {
+                return;
+            }
+
+            foreach ($locked->items as $item) {
                 $variant = $item->variant_id ? ProductVariant::withTrashed()->find($item->variant_id) : null;
 
                 if ($variant) {
-                    $this->stock->move($variant, 'in', $item->quantity, 'order_cancelled', null, $order,
+                    $this->stock->move($variant, 'in', $item->quantity, 'order_cancelled', null, $locked,
                         $item->unit_cost !== null ? (float) $item->unit_cost : null, allowNegative: true);
                 }
             }
+
+            // Cleared so a second cancellation, however it arrives, puts nothing back twice.
+            $locked->update(['stock_taken_at' => null]);
+            $order->setAttribute('stock_taken_at', null)->syncOriginalAttribute('stock_taken_at');
+        });
+    }
+
+    /**
+     * Take the goods off the shelf for an order that has not had them yet.
+     *
+     * This is the delivery half of an advance order: the booking took the money
+     * up front, and the stock only moves when the customer actually gets the
+     * goods. Called from OrderStatusService when the order reaches `delivered`.
+     */
+    public function fulfil(Order $order): void
+    {
+        DB::transaction(function () use ($order) {
+            $locked = Order::with('items')->lockForUpdate()->findOrFail($order->id);
+
+            // Already taken (an online or counter sale, or a repeated call): nothing to do.
+            if ($locked->hasStockLeft()) {
+                return;
+            }
+
+            foreach ($locked->items as $item) {
+                $variant = $item->variant_id ? ProductVariant::withTrashed()->find($item->variant_id) : null;
+
+                if (! $variant) {
+                    throw new RuntimeException($item->product_name . ' no longer exists, so it cannot be handed over. '
+                        . 'Remove the product from the order or restore it first.');
+                }
+
+                // allowNegative stays null: delivery follows Settings → "Allow negative stock",
+                // so a shop that refuses to oversell cannot hand over goods it does not have.
+                $this->stock->move($variant, 'out', $item->quantity, 'advance_delivery',
+                    'Advance order ' . $locked->order_number, $locked,
+                    $item->unit_cost !== null ? (float) $item->unit_cost : null);
+            }
+
+            $locked->update(['stock_taken_at' => now()]);
+            $order->setAttribute('stock_taken_at', $locked->stock_taken_at)->syncOriginalAttribute('stock_taken_at');
         });
     }
 }

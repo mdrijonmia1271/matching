@@ -25,6 +25,7 @@ return [
             'orders.update' => 'Update order status and details',
             'orders.cancel' => 'Cancel orders',
             'orders.refund' => 'Issue refunds',
+            'orders.advance' => 'Take advance orders (bookings)',
         ],
         'Inventory' => [
             'inventory.view' => 'View stock and stock history',
@@ -53,7 +54,7 @@ return [
             'reports.export' => 'Export reports',
         ],
         'Marketing' => [
-            'marketing.manage' => 'Manage coupons',
+            'marketing.manage' => 'Manage coupons and the newsletter list',
         ],
         'Staff' => [
             'staff.view' => 'View staff and roles',
@@ -78,7 +79,7 @@ return [
             'description' => 'Runs day-to-day operations. Cannot manage staff accounts or store settings.',
             'permissions' => [
                 'products.view', 'products.create', 'products.edit', 'products.delete',
-                'orders.view', 'orders.update', 'orders.cancel', 'orders.refund',
+                'orders.view', 'orders.update', 'orders.cancel', 'orders.refund', 'orders.advance',
                 'inventory.view', 'inventory.adjust',
                 'purchases.view', 'purchases.create', 'purchases.edit',
                 'customers.view', 'customers.create', 'customers.edit',
@@ -95,7 +96,7 @@ return [
             'description' => 'Sells in the shop and handles online orders.',
             'permissions' => [
                 'products.view',
-                'orders.view', 'orders.update', 'orders.cancel',
+                'orders.view', 'orders.update', 'orders.cancel', 'orders.advance',
                 'inventory.view',
                 'customers.view', 'customers.create', 'customers.edit',
                 'pos.sell',

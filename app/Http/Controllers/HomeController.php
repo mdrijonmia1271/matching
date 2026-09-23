@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\User;
+use App\Support\Settings;
 use Illuminate\Support\Collection;
 
 class HomeController extends Controller
@@ -28,6 +29,7 @@ class HomeController extends Controller
         $latest = $this->cards()->latest()->take(8)->get();
 
         return view('home', [
+            'hero' => $this->hero($featured, $latest),
             'categories' => $categories,
             'featured' => $featured,
             'latest' => $latest,
@@ -39,6 +41,41 @@ class HomeController extends Controller
             // else. Ordered Z to A, so the strip does not always open on the same name.
             'brands' => Brand::active()->whereNotNull('logo')->orderByDesc('name')->take(12)->get(),
         ]);
+    }
+
+    /**
+     * Hero pictures and copy, all editable under Admin -> Settings -> Hero section.
+     *
+     * @param  Collection<int, Product>  $featured
+     * @param  Collection<int, Product>  $latest
+     * @return array<string, mixed>
+     */
+    protected function hero(Collection $featured, Collection $latest): array
+    {
+        $hero = collect(Settings::all())
+            ->filter(fn ($value, $key) => str_starts_with($key, 'hero_'))
+            ->all();
+
+        // An empty link means "whatever is on sale", so the card keeps working
+        // when nobody has pointed it anywhere.
+        $hero['hero_offer_link'] = filled($hero['hero_offer_link'] ?? null)
+            ? $hero['hero_offer_link']
+            : route('shop.index', ['on_sale' => 1]);
+
+        // Uploaded pictures win; with none, the hero falls back to the newest
+        // featured product, as it did before the setting existed.
+        $slides = collect($hero['hero_images'] ?? [])
+            ->filter()
+            ->map(fn (string $path) => asset('storage/' . $path))
+            ->values();
+
+        if ($slides->isEmpty() && $product = ($featured->first() ?? $latest->first())) {
+            $slides = collect([$product->image_url]);
+        }
+
+        $hero['slides'] = $slides->all();
+
+        return $hero;
     }
 
     /** Base query for product cards; the rating is averaged in SQL to avoid an N+1. */
@@ -85,21 +122,56 @@ class HomeController extends Controller
     }
 
     /**
-     * Storefront counters. Real figures only: an invented number on the home
-     * page is the first thing a returning customer notices.
+     * Storefront counters, laid out under Admin -> Settings -> Stats strip.
+     * A tile counts the real thing unless it was given fixed text, so the
+     * figures stay true as the shop grows.
      *
      * @return array<int, array<string, string>>
      */
     protected function stats(): array
     {
-        $delivered = Order::whereIn('status', Order::SALE_STATUSES)->count();
+        if (! Settings::get('home_stats_enabled')) {
+            return [];
+        }
+
+        $tiles = [];
+
+        foreach ((array) Settings::get('home_stats', []) as $tile) {
+            $value = $tile['source'] === 'manual'
+                ? (string) ($tile['value'] ?? '')
+                : $this->statFigure($tile['source']);
+
+            if ($value === '') {
+                continue;
+            }
+
+            $tiles[] = [
+                'label' => (string) $tile['label'],
+                'value' => $value,
+                'icon' => (string) ($tile['icon'] ?? 'box'),
+            ];
+        }
+
+        return $tiles;
+    }
+
+    /** The live figure behind one stats tile. */
+    protected function statFigure(string $source): string
+    {
+        return match ($source) {
+            'products' => number_format(Product::active()->count()),
+            'customers' => number_format(Customer::count()),
+            'sales' => number_format(Order::whereIn('status', Order::SALE_STATUSES)->count()),
+            'rating' => $this->happyCustomers(),
+            default => '',
+        };
+    }
+
+    /** Average approved review score as a percentage; a shop with no reviews shows 100%. */
+    protected function happyCustomers(): string
+    {
         $rated = (float) Review::where('is_approved', true)->avg('rating');
 
-        return [
-            ['label' => 'Product', 'value' => number_format(Product::active()->count()), 'icon' => 'box'],
-            ['label' => 'Followers', 'value' => number_format(Customer::count()), 'icon' => 'users'],
-            ['label' => 'Monthly Sales', 'value' => number_format($delivered), 'icon' => 'chart'],
-            ['label' => 'Happy Customers', 'value' => ($rated > 0 ? round($rated / 5 * 100) : 100) . '%', 'icon' => 'user'],
-        ];
+        return ($rated > 0 ? round($rated / 5 * 100) : 100) . '%';
     }
 }

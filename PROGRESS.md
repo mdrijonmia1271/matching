@@ -1,6 +1,6 @@
 # Progress — Matching admin panel upgrade
 
-Last updated: 2026-09-17
+Last updated: 2026-09-19
 
 Laravel 12 · Blade · Tailwind 4 · Alpine.js · MySQL 8.4 (WAMP). No rebuild: existing architecture is extended.
 
@@ -17,10 +17,11 @@ Laravel 12 · Blade · Tailwind 4 · Alpine.js · MySQL 8.4 (WAMP). No rebuild: 
 - `matching-db-20260917-step12.sql`: before Step 12 (POS)
 - `matching-db-20260917-step13.sql`: before Step 13 (returns)
 - `matching-db-20260917-step14.sql`: before Step 14 (refunds)
+- `matching-db-20260919-advance.sql`: before advance orders
 
 The project is a git repository now (branch `main`), but Steps 8–14 are not committed yet.
 
-**Test status:** 90 tests pass (1,162 assertions). `npm run build` succeeds. All 17 new migrations are applied to the live MySQL database. New admin pages were smoke-tested on MySQL (all return 200).
+**Test status:** 128 tests pass (1,307 assertions). `npm run build` succeeds. All new migrations (newsletter, advance orders) are applied to the live MySQL database. New admin pages were smoke-tested on MySQL (all return 200).
 
 **Owner instruction (2026-09-16, standing):** after finishing each step, get the owner's confirmation before starting the next one.
 
@@ -287,6 +288,48 @@ The project is a git repository now (branch `main`), but Steps 8–14 are not co
   - **Accounts ledger:** refund rows link back to their order ("RF-00001 · MT-…"), like due receipts and supplier payments.
 - **Permissions:** `orders.refund` **plus** `accounting.create`, because money leaves an account. That means Super Admin, Manager and Accountant; Sales Staff and Warehouse Staff cannot refund and never see the form.
 - No existing data changed (the migration only adds a table).
+
+### Newsletter subscriptions (2026-09-19, outside the numbered plan)
+Asked for on top of the P1 plan, so the P2 step numbers below are unchanged.
+- **`newsletter_subscribers` table:** unique `email`, `source` (default `home`), `ip_address`, `subscribed_at`, `unsubscribed_at`. Nothing else was touched.
+- **Storefront:** the home page newsletter form was a decoration — a GET to the shop page. It is now `POST /newsletter` (`throttle:10,1`), validated, with the email lowercased and trimmed before saving.
+  - **A repeat sign-up is not an error and not a duplicate:** an address already on the list is told so, an address that had left is switched back on.
+  - The result renders **beside the form** (named error bag `newsletter`, session key `newsletter_status`) and the redirect carries the `#newsletter` fragment, so the visitor stays where they were instead of being thrown to the page-top flash strip.
+- **Admin → Sales → Newsletter:** counts (on the list, new this month, unsubscribed), search by email, status and sort filters, per-row Unsubscribe / Resubscribe and Delete, and a CSV export that follows the filters.
+  - **Unsubscribe keeps the row** (`unsubscribed_at`), so the history survives; Delete is the only thing that really removes an address.
+  - Toggles and deletes write to the activity log under module `newsletter`.
+- **Permissions:** `marketing.manage` for the screen (Super Admin and Manager, same as coupons), `reports.export` on top for the CSV. No new permission key, so no role changes were needed.
+- **Not built:** no email is actually sent yet — the list is collected, nothing mails it. No public unsubscribe link, so a request to leave is handled by staff from the admin screen.
+
+### Product gallery picker (2026-09-19, outside the numbered plan)
+- **Drag and drop, or click to choose.** The plain file input is now a dashed drop box (the input itself is `sr-only`, so keyboard and screen readers still get a real labelled field). Dropping images on it works the same as picking them.
+- **Up to six gallery images in one go, with previews under the field.** Chosen files draw a thumbnail each (with its name) directly below the drop box, every one with its own **×**. Removing one rebuilds the input's `FileList` (`DataTransfer`), so what is previewed is exactly what is posted.
+- **Files are added to the selection, not swapped for it.** A second drop or pick appends, so six images can arrive in one go or a few at a time. Non-images, files already chosen and anything past the limit are skipped, and the line under the box says which and why.
+- **The cap is on the gallery, not on one upload.** `gallery|max:6` only limited a single submit, so a product with six images could take six more. The rule now counts what the product already has and says how much room is left; the counter under the field says the same thing before the form is sent.
+- **`Product::MAX_GALLERY_IMAGES`** holds the number, used by the rule, the label and the picker.
+- **New images are ordered after the existing ones.** `sort_order` used to restart at 0 on every upload, so an edit gave duplicate positions; the whole gallery is now renumbered from 0 on every save, with the new uploads last.
+- **The main image is previewed too, on both forms.** Choosing a file shows it straight away (brand-coloured ring, "New — replaces the current one when you save"); on edit the current image shows until then, and a **×** drops the new choice and brings the saved one back. Nothing is uploaded until the product is saved.
+- **Saved images and new files share one grid** under the drop box, so the gallery reads as a single run of tiles rather than two blocks. The new ones are marked by a brand-coloured number badge and their file name; the saved ones are plain. The Images card gives the gallery the wide half of the row (`sm:grid-cols-[200px_1fr]`), so all six tiles fit side by side.
+- **Thumbnails are dragged into the order the shop shows them in.** Saved images and new files are two separate lists — one is rows in the database, the other files not uploaded yet — and each reorders on its own; the new ones always follow the saved ones. Every tile carries its position number, plus ← → buttons, because dragging is not reachable from the keyboard.
+- **The saved order travels as hidden `image_order[]` fields** on the product form, so reordering is part of saving the product, not a separate request. `ProductController::syncGallery` writes `sort_order` from that list, puts anything the form did not mention after it, then the new uploads. The ids are looked up **through the product's own images**, so an id belonging to another product is ignored rather than stolen.
+- `shop/show` reads `$product->images`, which is ordered by `sort_order`, so the order set here is what the shop gallery shows.
+
+### Advance orders (2026-09-19, outside the numbered plan)
+Bookings: the customer pays something now and takes the goods later. Backup before the change: `matching-db-20260919-advance.sql`.
+
+- **An advance order is an ordinary order with `channel = advance`,** not a separate table. That is what keeps payments, the account ledger, customer dues, the invoice, status history, returns, refunds and every report working on it without being rebuilt. It is created as **`confirmed`**, so it counts as a sale and whatever is unpaid is a real due.
+- **The one real difference is when stock moves.** Online and counter sales take stock as they are created; an advance order takes it **when it is delivered**, because the goods may not be in the shop yet. Booking an out-of-stock item is allowed and is the whole point.
+- **`orders.stock_taken_at`** records that difference for every order instead of it being guessed from the channel and status. Everything that touches stock reads it:
+  - `OrderService::fulfil` — takes the goods off the shelf (`advance_delivery` movement), called from `OrderStatusService` when the order reaches `delivered`. It follows Settings → "Allow negative stock", so a shop that refuses to oversell cannot hand over goods it has not got.
+  - `OrderService::restock` — **only restocks an order whose goods actually left**, and clears the flag afterwards. This was a real bug waiting to happen: cancelling a booking would otherwise have invented units that were never sold. It now also locks the order, so two cancellations cannot both put stock back.
+  - `ReturnService::request` — refuses a return on an order that has not been handed over yet ("cancel it instead"): nothing has gone out to come back.
+  - Existing rows were backfilled `stock_taken_at = created_at` for everything except cancelled orders, whose stock has already gone back — so no order can be restocked twice. Checked on the live database: 6 of 8 orders stamped, both cancelled ones left null.
+- **The price is typed in, not read off the variant.** A booking is a deal struck with the customer, often before today's price is set. The variant's current price is the default; a blank falls back to it, zero is allowed, negative is not. (This is the deliberate difference from the till, where the price always comes from the variant.)
+- **A customer is required.** The rest of the money is owed until the goods are handed over, and a walk-in cannot be chased for it.
+- **Admin → Sales → Advance orders:** counts (waiting, past the expected date, booked value, advance held), filters (waiting / with money owed / overdue / handed over / cancelled / all), search, date range, CSV export, and a booking form with the same product and customer lookup as the till, per-line agreed price, expected date, and a split advance payment.
+- The order page itself does the rest: an **Advance order** badge, a banner saying the goods are still on the shelf, and the usual status buttons — `delivered` is what moves the stock.
+- **Permissions:** `orders.view` to see the list, new **`orders.advance`** to take one (money is involved), `reports.export` for the CSV. The migration grants it to Manager and Sales Staff, which matches the config presets; Accountant and Warehouse Staff cannot book.
+- **Not built:** a booking cannot be edited after it is taken (change it by cancelling and re-booking), and there is no reminder when the expected date passes beyond the count on the screen.
 
 ---
 ## 2. In progress

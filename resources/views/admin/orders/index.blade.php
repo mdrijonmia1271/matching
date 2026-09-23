@@ -62,7 +62,7 @@
                             </td>
                             <td class="px-4 py-3 text-center text-slate-600">{{ $order->items_count }}</td>
                             <td class="px-4 py-3">
-                                <p class="text-xs text-slate-600">{{ $order->isPosSale() ? 'Counter' : ($order->payment_method === 'cod' ? 'COD' : 'Online') }}</p>
+                                <p class="text-xs text-slate-600">{{ $order->isAdvanceOrder() ? 'Advance' : ($order->isPosSale() ? 'Counter' : ($order->payment_method === 'cod' ? 'COD' : 'Online')) }}</p>
                                 <span class="text-xs font-semibold {{ $order->payment_status === 'paid' ? 'text-emerald-600' : ($order->payment_status === 'unpaid' ? 'text-amber-600' : 'text-rose-600') }}">
                                     {{ $order->payment_status_label }}
                                 </span>

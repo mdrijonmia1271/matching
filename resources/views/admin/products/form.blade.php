@@ -110,6 +110,152 @@
                 },
             };
         }
+
+        /**
+         * The gallery picker: files arrive by dropping them on the box or by
+         * picking them, previews sit right under it, and thumbnails — saved
+         * ones and new ones alike — can be dragged into the order the shop
+         * should show them in.
+         *
+         * Two things carry that order to the server: the file input, whose
+         * FileList is rebuilt (via DataTransfer) on every change, and the
+         * hidden `image_order[]` fields listing the saved images by id.
+         */
+        function galleryPicker(saved, max, main) {
+            return {
+                saved,
+                max,
+                /** The main image already on the product, and the one just chosen to replace it. */
+                mainSaved: main,
+                mainPick: null,
+                picks: [],
+                note: '',
+                warn: false,
+                dragging: false,
+                held: null,
+                get mainUrl() {
+                    return this.mainPick || this.mainSaved;
+                },
+                pickMain(event) {
+                    const file = (event.target.files || [])[0];
+
+                    if (this.mainPick) URL.revokeObjectURL(this.mainPick);
+
+                    this.mainPick = file && file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+                },
+                /** Drops the new choice and shows the saved image again. */
+                clearMain() {
+                    if (this.mainPick) URL.revokeObjectURL(this.mainPick);
+
+                    this.mainPick = null;
+                    this.$refs.main.value = '';
+                },
+                /** Slots left on the product, counting what is already saved. */
+                get free() {
+                    return Math.max(0, this.max - this.saved.length);
+                },
+                get room() {
+                    return Math.max(0, this.free - this.picks.length);
+                },
+                drop(event) {
+                    this.dragging = false;
+                    this.add(event.dataTransfer.files);
+                },
+                /** New files are added to the ones already chosen, not swapped for them. */
+                add(list) {
+                    const arriving = Array.from(list || []);
+                    const images = arriving.filter(file => file.type.startsWith('image/'));
+                    const kept = this.picks.map(pick => pick.file);
+                    const skipped = { type: arriving.length - images.length, dupe: 0, full: 0 };
+
+                    for (const file of images) {
+                        const same = other => other.name === file.name
+                            && other.size === file.size
+                            && other.lastModified === file.lastModified;
+
+                        if (kept.some(same)) {
+                            skipped.dupe++;
+                        } else if (kept.length >= this.free) {
+                            skipped.full++;
+                        } else {
+                            kept.push(file);
+                        }
+                    }
+
+                    this.reset(kept);
+                    this.explain(skipped);
+                },
+                explain(skipped) {
+                    const reasons = [];
+
+                    if (skipped.type) reasons.push(skipped.type + ' not an image');
+                    if (skipped.dupe) reasons.push(skipped.dupe + ' already chosen');
+                    if (skipped.full) reasons.push(skipped.full + ' over the limit of ' + this.max);
+
+                    this.warn = reasons.length > 0;
+                    this.note = reasons.length ? 'Skipped: ' + reasons.join(', ') + '.' : '';
+                },
+                remove(index) {
+                    const kept = this.picks.map(pick => pick.file);
+                    kept.splice(index, 1);
+
+                    this.note = '';
+                    this.warn = false;
+                    this.reset(kept);
+                },
+                reset(files) {
+                    this.picks.forEach(pick => URL.revokeObjectURL(pick.url));
+                    this.picks = files.map((file, i) => ({
+                        key: i + '-' + file.name + '-' + file.lastModified,
+                        file,
+                        name: file.name,
+                        url: URL.createObjectURL(file),
+                    }));
+
+                    this.syncInput();
+                },
+                syncInput() {
+                    const bag = new DataTransfer();
+                    this.picks.forEach(pick => bag.items.add(pick.file));
+                    this.$refs.input.files = bag.files;
+                },
+                rows(list) {
+                    return list === 'saved' ? this.saved : this.picks;
+                },
+                grab(list, index) {
+                    this.held = { list, index };
+                },
+                /**
+                 * Reordering happens while the thumbnail is dragged over its
+                 * neighbour, so the row always shows where it would land.
+                 * Saved images and new files are separate lists: one is rows in
+                 * the database, the other files not uploaded yet.
+                 */
+                shift(list, index) {
+                    if (! this.held || this.held.list !== list || this.held.index === index) return;
+
+                    const rows = this.rows(list);
+                    const [moved] = rows.splice(this.held.index, 1);
+
+                    rows.splice(index, 0, moved);
+                    this.held.index = index;
+
+                    if (list === 'picks') this.syncInput();
+                },
+                move(list, index, step) {
+                    const rows = this.rows(list);
+                    const to = index + step;
+
+                    if (to < 0 || to >= rows.length) return;
+
+                    const [moved] = rows.splice(index, 1);
+
+                    rows.splice(to, 0, moved);
+
+                    if (list === 'picks') this.syncInput();
+                },
+            };
+        }
     </script>
 
     <form method="POST" enctype="multipart/form-data"
@@ -311,36 +457,132 @@
                 </div>
             </section>
 
-            <section class="card p-6">
+            @php
+                $mainImage = $product->image ? asset('storage/' . $product->image) : '';
+
+                $savedImages = $product->exists
+                    ? $product->images->map(fn ($image) => ['id' => $image->id, 'url' => $image->url])->values()
+                    : collect();
+            @endphp
+
+            <section class="card p-6" x-data="galleryPicker(@js($savedImages), {{ \App\Models\Product::MAX_GALLERY_IMAGES }}, @js($mainImage))">
                 <h2 class="text-base font-bold text-slate-900">Images</h2>
 
-                <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                <div class="mt-5 grid gap-5 sm:grid-cols-[200px_1fr]">
                     <div>
                         <label for="image" class="label">Main image</label>
-                        <input id="image" name="image" type="file" accept="image/*" class="input p-2">
-                        @if($product->image)
-                            <img src="{{ asset('storage/' . $product->image) }}" alt="" class="mt-3 h-28 w-28 rounded-lg object-cover">
-                        @endif
+                        <input id="image" name="image" type="file" accept="image/*" class="input p-2"
+                               x-ref="main" @change="pickMain($event)">
+
+                        <div class="mt-3" x-show="mainUrl" x-cloak>
+                            <div class="relative w-28">
+                                <img :src="mainUrl" alt="" class="aspect-square w-28 rounded-lg object-cover ring-1"
+                                     :class="mainPick ? 'ring-brand-300' : 'ring-slate-200'">
+                                <button type="button" @click="clearMain()" x-show="mainPick"
+                                        class="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-rose-600 text-xs text-white"
+                                        aria-label="Undo this choice">&times;</button>
+                            </div>
+                            <p class="mt-1 text-[11px] text-slate-500"
+                               x-text="mainPick ? 'New — replaces the current one when you save' : 'Current'"></p>
+                        </div>
                     </div>
 
                     <div>
-                        <label for="gallery" class="label">Gallery <span class="text-slate-400">(up to 6)</span></label>
-                        <input id="gallery" name="gallery[]" type="file" accept="image/*" multiple class="input p-2">
+                        <label for="gallery" class="label">
+                            Gallery <span class="text-slate-400">(up to {{ \App\Models\Product::MAX_GALLERY_IMAGES }})</span>
+                        </label>
+
+                        <button type="button" @click="$refs.input.click()"
+                                @dragover.prevent="dragging = true"
+                                @dragenter.prevent="dragging = true"
+                                @dragleave.self.prevent="dragging = false"
+                                @drop.prevent="drop($event)"
+                                :class="dragging ? 'border-brand-500 bg-brand-50' : 'border-slate-300 hover:border-brand-400 hover:bg-slate-50'"
+                                class="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-2 text-left transition">
+                            <svg class="h-5 w-5 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+                            </svg>
+                            <span class="min-w-0">
+                                <span class="block text-sm font-medium leading-5 text-slate-700">Drop images here, or click to choose</span>
+                                <span class="block text-xs leading-4 text-slate-500" x-text="room
+                                    ? 'Up to ' + room + ' more · JPG or PNG, 2 MB each'
+                                    : 'The gallery is full — remove one to add another.'"></span>
+                            </span>
+                        </button>
+
+                        <input id="gallery" name="gallery[]" type="file" accept="image/*" multiple class="sr-only"
+                               x-ref="input" @change="add($event.target.files)">
+
+                        <p class="mt-2 text-xs" :class="warn ? 'text-rose-600' : 'text-slate-500'"
+                           x-text="note || (picks.length ? picks.length + ' selected · ' + room + ' slot(s) left' : '')"
+                           x-show="note || picks.length" x-cloak></p>
+
+                        <p class="mt-3 text-xs text-slate-500" x-show="saved.length || picks.length" x-cloak>
+                            Drag to reorder &mdash; the first one leads the shop gallery. The named ones are being added now.
+                        </p>
+
+                        {{-- Saved images and new files share one grid, so the whole gallery reads as one row of tiles. --}}
+                        <div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6"
+                             x-show="saved.length || picks.length" x-cloak>
+                            <template x-for="(image, index) in saved" :key="'saved-' + image.id">
+                                <div draggable="true"
+                                     @dragstart="grab('saved', index)"
+                                     @dragover.prevent="shift('saved', index)"
+                                     @dragend="held = null"
+                                     :class="held && held.list === 'saved' && held.index === index ? 'opacity-40' : ''"
+                                     class="cursor-move">
+                                    <div class="relative">
+                                        <img :src="image.url" alt="" class="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200">
+                                        <span class="absolute left-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-slate-900/70 text-[10px] font-semibold text-white"
+                                              x-text="index + 1"></span>
+                                        <button type="button"
+                                                @click="if (confirm('Remove this image?')) document.getElementById('del-img-' + image.id).submit()"
+                                                class="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-rose-600 text-xs text-white"
+                                                aria-label="Remove this image">&times;</button>
+                                    </div>
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button type="button" @click="move('saved', index, -1)" :disabled="index === 0"
+                                                class="px-1 text-xs text-slate-400 hover:text-brand-600 disabled:opacity-30"
+                                                aria-label="Move earlier">&larr;</button>
+                                        <button type="button" @click="move('saved', index, 1)" :disabled="index === saved.length - 1"
+                                                class="px-1 text-xs text-slate-400 hover:text-brand-600 disabled:opacity-30"
+                                                aria-label="Move later">&rarr;</button>
+                                    </div>
+
+                                    {{-- The order the thumbnails sit in is what gets saved. --}}
+                                    <input type="hidden" name="image_order[]" :value="image.id">
+                                </div>
+                            </template>
+
+                            <template x-for="(pick, index) in picks" :key="pick.key">
+                                <div draggable="true"
+                                     @dragstart="grab('picks', index)"
+                                     @dragover.prevent="shift('picks', index)"
+                                     @dragend="held = null"
+                                     :class="held && held.list === 'picks' && held.index === index ? 'opacity-40' : ''"
+                                     class="cursor-move">
+                                    <div class="relative">
+                                        <img :src="pick.url" alt="" class="aspect-square w-full rounded-lg object-cover ring-1 ring-brand-300">
+                                        <span class="absolute left-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-brand-600 text-[10px] font-semibold text-white"
+                                              x-text="saved.length + index + 1"></span>
+                                        <button type="button" @click="remove(index)"
+                                                class="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-rose-600 text-xs text-white"
+                                                aria-label="Remove this image">&times;</button>
+                                    </div>
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button type="button" @click="move('picks', index, -1)" :disabled="index === 0"
+                                                class="px-1 text-xs text-slate-400 hover:text-brand-600 disabled:opacity-30"
+                                                aria-label="Move earlier">&larr;</button>
+                                        <button type="button" @click="move('picks', index, 1)" :disabled="index === picks.length - 1"
+                                                class="px-1 text-xs text-slate-400 hover:text-brand-600 disabled:opacity-30"
+                                                aria-label="Move later">&rarr;</button>
+                                    </div>
+                                    <p class="truncate text-center text-[11px] text-slate-500" x-text="pick.name" :title="pick.name"></p>
+                                </div>
+                            </template>
+                        </div>
                     </div>
                 </div>
-
-                @if($product->exists && $product->images->isNotEmpty())
-                    <div class="mt-5 flex flex-wrap gap-3">
-                        @foreach($product->images as $image)
-                            <div class="relative">
-                                <img src="{{ $image->url }}" alt="" class="h-24 w-24 rounded-lg object-cover">
-                                <button type="button"
-                                        onclick="if(confirm('Remove this image?')) document.getElementById('del-img-{{ $image->id }}').submit()"
-                                        class="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-rose-600 text-xs text-white">&times;</button>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
             </section>
         </div>
 

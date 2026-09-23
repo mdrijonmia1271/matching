@@ -79,7 +79,7 @@
             </p>
         </div>
         <div class="meta">
-            <strong>{{ $order->isPosSale() ? 'Sales receipt' : 'Invoice' }}</strong>
+            <strong>{{ $order->isPosSale() ? 'Sales receipt' : ($order->isAdvanceOrder() ? 'Advance order' : 'Invoice') }}</strong>
             {{ $order->order_number }}<br>
             {{ $order->created_at?->format('d M Y, g:i a') }}<br>
             {{ $order->payment_method_label }} · {{ $order->payment_status_label }}

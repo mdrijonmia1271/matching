@@ -273,6 +273,9 @@ class ShopFlowTest extends TestCase
             'status' => 'pending',
             'subtotal' => 1200,
             'total' => 1200,
+            // Every real order takes its stock as it is created, and cancelling gives it back.
+            // Only an order that actually took stock has any to return.
+            'stock_taken_at' => now(),
         ]);
         $order->items()->create([
             'product_id' => $product->id,

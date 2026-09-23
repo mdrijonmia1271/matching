@@ -31,6 +31,49 @@ return [
         // Account (by code) that receives online gateway payments.
         'online_payment_account' => 'bank',
         'invoice_note' => 'Thank you for shopping with us.',
+
+        // Home page hero; edited under Admin -> Settings -> Hero section.
+        // Up to three pictures; the hero fades through them. Empty falls back
+        // to the newest featured product's picture.
+        'hero_images' => [],
+        'hero_title' => 'Fashion are unique',
+        'hero_subtitle' => 'Trending winter collection',
+        'hero_offer_enabled' => true,
+        'hero_offer_kicker' => 'Up to',
+        'hero_offer_value' => '50',
+        'hero_offer_suffix' => '%',
+        'hero_offer_off' => 'Off',
+        'hero_offer_label' => 'On new arrivals',
+        'hero_offer_button' => 'Shop now',
+        'hero_offer_link' => '',
+
+        // The four counters under the categories, edited under
+        // Admin -> Settings -> Stats strip. A tile reads its figure from the
+        // catalogue unless its source is `manual`, and then `value` is printed.
+        'home_stats_enabled' => true,
+        'home_stats' => [
+            ['label' => 'Product', 'icon' => 'box', 'source' => 'products', 'value' => ''],
+            ['label' => 'Followers', 'icon' => 'users', 'source' => 'customers', 'value' => ''],
+            ['label' => 'Monthly Sales', 'icon' => 'chart', 'source' => 'sales', 'value' => ''],
+            ['label' => 'Happy Customers', 'icon' => 'user', 'source' => 'rating', 'value' => ''],
+        ],
+    ],
+
+    /* Where a stats tile gets its figure from. */
+    'home_stat_sources' => [
+        'products' => 'Products in the catalogue',
+        'customers' => 'Registered customers',
+        'sales' => 'Completed orders',
+        'rating' => 'Happy customers (from review scores)',
+        'manual' => 'Fixed text I type myself',
+    ],
+
+    /* Marks drawn in home.blade.php for a stats tile. */
+    'home_stat_icons' => [
+        'box' => 'Box',
+        'users' => 'People',
+        'chart' => 'Chart',
+        'user' => 'Person',
     ],
 
     /*

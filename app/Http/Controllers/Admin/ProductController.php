@@ -91,7 +91,7 @@ class ProductController extends Controller implements HasMiddleware
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        $this->storeGallery($request, $product);
+        $this->syncGallery($request, $product);
 
         AuditLogger::log('products', 'created', $product, 'Product ' . $product->name . ' created with ' . $product->variants()->count() . ' variant(s)',
             new: $product->only(['name', 'sku', 'category_id', 'cost_price', 'price', 'sale_price', 'is_active']));
@@ -130,7 +130,7 @@ class ProductController extends Controller implements HasMiddleware
             Storage::disk('public')->delete($oldImage);
         }
 
-        $this->storeGallery($request, $product);
+        $this->syncGallery($request, $product);
 
         [$old, $new] = $result['changes'];
         $variants = array_filter($result['variants']);
@@ -212,8 +212,20 @@ class ProductController extends Controller implements HasMiddleware
             'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:price'],
             'tags' => ['nullable', 'string', 'max:500'],
             'image' => ['nullable', 'image', 'max:2048'],
-            'gallery' => ['nullable', 'array', 'max:6'],
+            'gallery' => ['nullable', 'array', 'max:' . Product::MAX_GALLERY_IMAGES,
+                function (string $attribute, mixed $value, Closure $fail) use ($product) {
+                    // The cap is on the gallery, not on one upload: six already there means no room for a seventh.
+                    $room = Product::MAX_GALLERY_IMAGES - (int) $product?->images()->count();
+
+                    if (count((array) $value) > $room) {
+                        $fail($room > 0
+                            ? "This product has room for $room more image(s). Remove some below first."
+                            : 'This product already has ' . Product::MAX_GALLERY_IMAGES . ' gallery images. Remove one below first.');
+                    }
+                }],
             'gallery.*' => ['image', 'max:2048'],
+            'image_order' => ['nullable', 'array', 'max:' . Product::MAX_GALLERY_IMAGES],
+            'image_order.*' => ['integer'],
             'variants' => ['required', 'array', 'min:1', 'max:300'],
             'variants.*.id' => ['nullable', 'integer'],
             'variants.*.color' => ['nullable', 'string', 'max:40'],
@@ -234,7 +246,7 @@ class ProductController extends Controller implements HasMiddleware
         ]);
 
         $rows = array_values($data['variants']);
-        unset($data['variants'], $data['gallery'], $data['image']);
+        unset($data['variants'], $data['gallery'], $data['image'], $data['image_order']);
 
         $data['tags'] = collect(explode(',', (string) ($data['tags'] ?? '')))
             ->map(fn ($tag) => trim($tag))->filter()->unique()->take(20)->values()->all() ?: null;
@@ -308,12 +320,32 @@ class ProductController extends Controller implements HasMiddleware
         }
     }
 
-    protected function storeGallery(Request $request, Product $product): void
+    /**
+     * Saves the gallery in the order the form shows it: the images named in
+     * `image_order` first (that is the order the thumbnails were dragged into),
+     * anything the form did not mention after them, and the new uploads last.
+     */
+    protected function syncGallery(Request $request, Product $product): void
     {
-        foreach ((array) $request->file('gallery', []) as $index => $file) {
+        $order = array_map('intval', (array) $request->input('image_order', []));
+        $images = $product->images()->get()->keyBy('id');
+        $position = 0;
+
+        // Only this product's images: an id from another product is simply ignored.
+        foreach ($order as $id) {
+            if ($image = $images->pull($id)) {
+                $image->update(['sort_order' => $position++]);
+            }
+        }
+
+        foreach ($images->sortBy('sort_order') as $image) {
+            $image->update(['sort_order' => $position++]);
+        }
+
+        foreach ((array) $request->file('gallery', []) as $file) {
             $product->images()->create([
                 'path' => $file->store('products', 'public'),
-                'sort_order' => $index,
+                'sort_order' => $position++,
             ]);
         }
     }

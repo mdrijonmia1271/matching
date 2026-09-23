@@ -16,11 +16,26 @@
             @if($order->isPosSale())
                 <span class="rounded-full bg-violet-100 px-3 py-1 text-violet-700">Counter sale</span>
             @endif
+            @if($order->isAdvanceOrder())
+                <span class="rounded-full bg-indigo-100 px-3 py-1 text-indigo-700">Advance order</span>
+            @endif
             <span class="rounded-full px-3 py-1 {{ $order->statusColor() }}">{{ $order->status_label }}</span>
             <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">{{ $order->payment_method_label }} &middot; {{ $order->payment_status_label }}</span>
             <a href="{{ route('admin.orders.invoice', $order) }}" target="_blank" class="btn-secondary">Invoice</a>
         </div>
     </div>
+
+    @if($order->isAwaitingFulfilment())
+        <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <strong>Booked in advance.</strong> The goods are still on the shelf&thinsp;&mdash;&thinsp;the stock comes off when this order is marked <strong>delivered</strong>.
+            @if($order->expected_at)
+                Expected {{ $order->expected_at->format('d M Y') }}{{ $order->expected_at->isPast() ? ' (past due)' : '' }}.
+            @endif
+            @if($order->due_amount > 0)
+                {{ \App\Support\Money::format($order->due_amount) }} is still owed.
+            @endif
+        </div>
+    @endif
 
     <div class="mt-4 grid gap-6 lg:grid-cols-[1fr_360px]">
         <div class="min-w-0 space-y-6">

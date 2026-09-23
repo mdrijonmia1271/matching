@@ -24,13 +24,13 @@
             ['admin.orders.index', 'Orders', 'M3 3h2l2.4 12.1a2 2 0 002 1.6h7.7a2 2 0 002-1.6L21 7H6', 'admin.orders.*', 'orders.view'],
             ['admin.returns.index', 'Returns', 'M3 10h11a4 4 0 010 8h-3m-8-8l4-4m-4 4l4 4', 'admin.returns.*', 'orders.view'],
             ['admin.customers.index', 'Customers', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', 'admin.customers.*', 'customers.view'],
+            ['admin.advance-orders.index', 'Advance orders', 'M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2zm7-9l1.2 2.4 2.8.4-2 2 .5 2.7L12 17l-2.5 1.5.5-2.7-2-2 2.8-.4z', 'admin.advance-orders.*', 'orders.view'],
             ['admin.customer-dues.index', 'Customer dues', 'M12 8c-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2m0-8c1.1 0 2.1.4 2.6 1M12 8V7m0 1v8m0 0v1m0-1c-1.1 0-2.1-.4-2.6-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'admin.customer-dues.*', 'customers.view'],
             ['admin.coupons.index', 'Coupons', 'M9 7h6m-6 4h6m-8 8h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z', 'admin.coupons.*', 'marketing.manage'],
         ]],
         ['Catalogue', [
             ['admin.products.index', 'Products', 'M20 7l-8-4-8 4m16 0v10l-8 4-8-4V7m16 0l-8 4m0 0L4 7m8 4v10', 'admin.products.*', 'products.view'],
             ['admin.categories.index', 'Categories', 'M4 6h16M4 12h16M4 18h16', 'admin.categories.*', 'products.view'],
-            ['admin.brands.index', 'Brands', 'M7 7h.01M7 3h5a2 2 0 011.4.6l7 7a2 2 0 010 2.8l-5 5a2 2 0 01-2.8 0l-7-7A2 2 0 013 10V5a2 2 0 012-2z', 'admin.brands.*', 'products.view'],
             ['admin.barcodes.index', 'Barcode labels', 'M4 5v14M7 5v14M10 5v14M14 5v14M17 5v14M20 5v14', 'admin.barcodes.*', 'products.view'],
         ]],
         ['Inventory', [
@@ -48,7 +48,11 @@
         ['Administration', [
             ['admin.staff.index', 'Staff', 'M17 20h5v-2a3 3 0 00-5.4-1.8M9 20H4v-2a3 3 0 015.4-1.8M15 7a3 3 0 11-6 0 3 3 0 016 0z', 'admin.staff.*', 'staff.view'],
             ['admin.roles.index', 'Roles & permissions', 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z', 'admin.roles.*', 'staff.view'],
-            ['admin.settings.edit', 'Settings', 'M10.3 4.3a1.7 1.7 0 013.4 0 1.7 1.7 0 002.6 1.1 1.7 1.7 0 012.3 2.3 1.7 1.7 0 001.1 2.6 1.7 1.7 0 010 3.4 1.7 1.7 0 00-1.1 2.6 1.7 1.7 0 01-2.3 2.3 1.7 1.7 0 00-2.6 1.1 1.7 1.7 0 01-3.4 0 1.7 1.7 0 00-2.6-1.1 1.7 1.7 0 01-2.3-2.3 1.7 1.7 0 00-1.1-2.6 1.7 1.7 0 010-3.4 1.7 1.7 0 001.1-2.6 1.7 1.7 0 012.3-2.3 1.7 1.7 0 002.6-1.1zM15 12a3 3 0 11-6 0 3 3 0 016 0z', 'admin.settings.*', 'settings.manage'],
+            ['admin.settings.edit', 'Settings', 'M10.3 4.3a1.7 1.7 0 013.4 0 1.7 1.7 0 002.6 1.1 1.7 1.7 0 012.3 2.3 1.7 1.7 0 001.1 2.6 1.7 1.7 0 010 3.4 1.7 1.7 0 00-1.1 2.6 1.7 1.7 0 01-2.3 2.3 1.7 1.7 0 00-2.6 1.1 1.7 1.7 0 01-3.4 0 1.7 1.7 0 00-2.6-1.1 1.7 1.7 0 01-2.3-2.3 1.7 1.7 0 00-1.1-2.6 1.7 1.7 0 010-3.4 1.7 1.7 0 001.1-2.6 1.7 1.7 0 012.3-2.3 1.7 1.7 0 002.6-1.1zM15 12a3 3 0 11-6 0 3 3 0 016 0z', 'admin.settings.edit', 'settings.manage'],
+            ['admin.settings.hero.edit', 'Hero section', 'M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zm2 4h6m-6 3h4m5 4l3-3 3 3', 'admin.settings.hero.*', 'settings.manage'],
+            ['admin.settings.stats.edit', 'Stats strip', 'M5 20V10m7 10V4m7 16v-6M3 20h18', 'admin.settings.stats.*', 'settings.manage'],
+            ['admin.brands.index', 'Brands', 'M7 7h.01M7 3h5a2 2 0 011.4.6l7 7a2 2 0 010 2.8l-5 5a2 2 0 01-2.8 0l-7-7A2 2 0 013 10V5a2 2 0 012-2z', 'admin.brands.*', 'products.view'],
+            ['admin.newsletter.index', 'Newsletter', 'M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', 'admin.newsletter.*', 'marketing.manage'],
             ['admin.activity.index', 'Activity log', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', 'admin.activity.*', 'audit.view'],
         ]],
     ];

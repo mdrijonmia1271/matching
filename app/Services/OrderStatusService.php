@@ -57,6 +57,14 @@ class OrderStatusService
                         $locked->order_number, strtolower($locked->status_label), strtolower(Order::STATUS_LABELS[$to])));
             }
 
+            // An advance order has been sitting with the goods still on the shelf; this is
+            // where they finally leave. restock() is the mirror image and puts back only
+            // what actually went out, so neither side can double-count.
+            if ($to === 'delivered') {
+                $this->orders->fulfil($locked);
+                $locked->refresh();
+            }
+
             if ($to === 'cancelled') {
                 $this->orders->restock($locked);
 

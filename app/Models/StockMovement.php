@@ -31,6 +31,7 @@ class StockMovement extends Model
         'opening' => 'Opening stock',
         'sale' => 'Online sale',
         'pos_sale' => 'POS sale',
+        'advance_delivery' => 'Advance order delivered',
         'order_cancelled' => 'Order cancelled',
         'purchase_received' => 'Purchase received',
         'return_restock' => 'Return restocked',

@@ -10,10 +10,6 @@
         $admin = auth()->user();
         $canEdit = $purchase->isOpen() && $admin->can('purchases.edit');
         $canPay = $admin->can('accounting.create');
-        $labelLink = route('admin.barcodes.index', [
-            'variants' => $purchase->items->pluck('variant_id')->all(),
-            'qty' => $purchase->items->pluck('quantity', 'variant_id')->all(),
-        ]);
     @endphp
 
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -22,11 +18,7 @@
         <div class="flex flex-wrap items-center gap-2">
             <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $purchase->status_color }}">{{ $purchase->status_label }}</span>
 
-            @if($purchase->isReceived())
-                @can('products.view')
-                    <a href="{{ $labelLink }}" class="btn-secondary">Print labels for this purchase</a>
-                @endcan
-            @endif
+            <a href="{{ route('admin.purchases.invoice', $purchase) }}" target="_blank" class="btn-secondary">Print / PDF</a>
 
             @if($canEdit)
                 <a href="{{ route('admin.purchases.edit', $purchase) }}" class="btn-secondary">Edit</a>
@@ -41,9 +33,11 @@
 
     <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         @foreach([
-            ['Supplier', $purchase->supplier?->name ?? '—', $purchase->supplier?->company ?: 'Supplier', 'text-slate-900'],
+            ['Supplier', $purchase->supplier?->name ?? 'No supplier', $purchase->supplier ? ($purchase->supplier->company ?: 'Supplier') : 'Bought without a supplier', 'text-slate-900'],
             ['Total', Money::format((float) $purchase->total), number_format($purchase->items->sum('quantity')) . ' units', 'text-slate-900'],
-            ['Supplier balance', Money::format($balance), $balance > 0 ? 'What the shop owes them' : 'Nothing owed', $balance > 0 ? 'text-rose-600' : 'text-slate-900'],
+            $purchase->supplier
+                ? ['Supplier balance', Money::format($balance), $balance > 0 ? 'What the shop owes them' : 'Nothing owed', $balance > 0 ? 'text-rose-600' : 'text-slate-900']
+                : ['Supplier balance', '—', 'Nobody is owed for this purchase', 'text-slate-400'],
             ['Received', $purchase->received_at?->format('d M Y') ?? '—', $purchase->receiver?->name ?? 'Not received yet', $purchase->isReceived() ? 'text-emerald-700' : 'text-slate-900'],
         ] as [$label, $value, $hint, $color])
             <div class="card p-5">
@@ -142,7 +136,8 @@
             @if($canEdit)
                 <form method="POST" action="{{ route('admin.purchases.receive', $purchase) }}" class="card space-y-3 p-6"
                       x-data="{
-                          pay: 0,
+                          {{-- With no supplier there is nobody to pay later, so the full total is the natural start. --}}
+                          pay: @js($purchase->supplier ? 0 : (float) $purchase->total),
                           method: @js(array_key_first($methods)),
                           account: @js((string) ($methodAccounts[array_key_first($methods)] ?? '')),
                           defaults: @js($methodAccounts),
@@ -151,17 +146,24 @@
                     <div>
                         <h2 class="text-base font-bold text-slate-900">Receive goods</h2>
                         <p class="text-xs text-slate-500">
-                            Adds {{ number_format($purchase->items->sum('quantity')) }} units to stock and bills
-                            {{ Money::format((float) $purchase->total) }} to {{ $purchase->supplier?->name }}. This cannot be undone.
+                            Adds {{ number_format($purchase->items->sum('quantity')) }} units to stock
+                            @if($purchase->supplier)
+                                and bills {{ Money::format((float) $purchase->total) }} to {{ $purchase->supplier->name }}.
+                            @else
+                                (no supplier, so nothing is billed).
+                            @endif
+                            This cannot be undone.
                         </p>
                     </div>
 
                     @if($canPay)
                         <div>
                             <label for="pay_now" class="label">Pay now <span class="text-slate-400">(optional)</span></label>
-                            <input id="pay_now" name="pay_now" type="number" step="0.01" min="0" max="{{ (float) $purchase->total + max(0, $balance) }}"
+                            <input id="pay_now" name="pay_now" type="number" step="0.01" min="0" max="{{ (float) $purchase->total + ($purchase->supplier ? max(0, $balance) : 0) }}"
                                    x-model="pay" class="input" placeholder="0.00">
-                            <p class="mt-1 text-xs text-slate-400">Leave empty to pay later from the supplier page.</p>
+                            <p class="mt-1 text-xs text-slate-400">
+                                {{ $purchase->supplier ? 'Leave empty to pay later from the supplier page.' : 'Taken out of the account below. Leave empty if it was paid some other way.' }}
+                            </p>
                         </div>
 
                         <div class="grid grid-cols-2 gap-2" x-show="Number(pay) > 0" x-cloak>
@@ -197,7 +199,7 @@
                         <dd>
                             @if($purchase->supplier)
                                 <a href="{{ route('admin.suppliers.show', $purchase->supplier) }}" class="text-brand-600 hover:underline">{{ $purchase->supplier->name }}</a>
-                            @else — @endif
+                            @else <span class="text-slate-500">No supplier</span> @endif
                         </dd>
                     </div>
                     <div><dt class="text-slate-500">Purchase date</dt><dd class="text-slate-900">{{ $purchase->purchase_date?->format('d M Y') }}</dd></div>

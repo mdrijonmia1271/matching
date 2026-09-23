@@ -285,12 +285,104 @@ class PurchaseTest extends TestCase
         $this->assertStringNotContainsString('INV-7777', $csv);
         $this->actingAs($this->staff('warehouse_staff'))->get(route('admin.purchases.export'))->assertForbidden();
 
-        // The received purchase offers labels, one per unit received.
         $this->actingAs($manager)->get(route('admin.purchases.show', $first))->assertOk()
-            ->assertSee('Print labels for this purchase')->assertSee('Stock added');
+            ->assertDontSee('Print labels for this purchase')->assertSee('Stock added');
+
+        // The barcode screen still accepts a purchase's variants and quantities.
 
         $this->actingAs($manager)->get(route('admin.barcodes.index', [
             'variants' => [$m->id], 'qty' => [$m->id => 10],
         ]))->assertOk()->assertViewHas('preselected', fn ($rows) => $rows->firstWhere('id', $m->id)['quantity'] === 10);
+    }
+
+    public function test_a_purchase_prints_as_an_a4_invoice(): void
+    {
+        [$m, $l] = $this->variants();
+        $manager = $this->staff('manager');
+
+        $this->actingAs($manager)->post(route('admin.purchases.store'), $this->payload($this->supplier(), $m, $l))->assertRedirect();
+        $purchase = Purchase::firstOrFail();
+
+        $this->actingAs($manager)->get(route('admin.purchases.show', $purchase))
+            ->assertSee(route('admin.purchases.invoice', $purchase));
+
+        $this->actingAs($manager)->get(route('admin.purchases.invoice', $purchase))
+            ->assertOk()
+            ->assertSee('Purchase invoice')
+            ->assertSee($purchase->number)
+            ->assertSee('Rahman &amp; Sons', false)
+            ->assertSee('INV-9001')
+            ->assertSee('KUR-M')
+            ->assertSee(\App\Support\Money::format(2500));
+
+        $this->actingAs($this->staff('sales_staff'))->get(route('admin.purchases.invoice', $purchase))->assertForbidden();
+    }
+
+    public function test_the_purchase_form_starts_from_the_saved_or_last_paid_price_and_receiving_keeps_it(): void
+    {
+        $category = Category::create(['name' => 'Tops', 'is_active' => true]);
+        $shirt = Product::create(['category_id' => $category->id, 'name' => 'Polo Shirt', 'price' => 1500, 'cost_price' => null, 'is_active' => true]);
+        $variant = $shirt->variants()->firstOrFail();
+        $manager = $this->staff('manager');
+
+        // Nothing saved and never bought: the form has nothing to start from.
+        $result = $this->actingAs($manager)->getJson(route('admin.variants.search', ['q' => $variant->sku]))->json('results.0');
+        $this->assertNull($result['cost']);
+        $this->assertNull($result['last_cost']);
+
+        $this->actingAs($manager)->post(route('admin.purchases.store'), [
+            'supplier_id' => $this->supplier()->id, 'status' => 'ordered', 'purchase_date' => now()->toDateString(),
+            'discount' => 0, 'additional_cost' => 0,
+            'items' => [['variant_id' => $variant->id, 'quantity' => 2, 'unit_cost' => 800]],
+        ])->assertRedirect();
+        $this->actingAs($manager)->post(route('admin.purchases.receive', Purchase::firstOrFail()))->assertSessionHas('success');
+
+        // A product without options gets the cost on the product itself, so editing it later keeps the cost.
+        $this->assertSame(800.0, (float) $shirt->fresh()->cost_price);
+
+        $result = $this->actingAs($manager)->getJson(route('admin.variants.search', ['q' => $variant->sku]))->json('results.0');
+        $this->assertEquals(800, $result['cost']);
+        $this->assertEquals(800, $result['last_cost']);
+    }
+
+    public function test_a_purchase_can_be_made_without_a_supplier_and_paid_straight_from_an_account(): void
+    {
+        [$m, $l] = $this->variants();
+        $manager = $this->staff('manager');
+        $cash = Account::where('code', 'cash')->firstOrFail();
+        app(\App\Services\AccountService::class)->entry($cash, 'in', 5000, 'Float');
+
+        $this->actingAs($manager)->get(route('admin.purchases.create'))->assertOk()->assertSee('No supplier');
+
+        $this->actingAs($manager)->post(route('admin.purchases.store'), $this->payload($this->supplier(), $m, $l, ['supplier_id' => '']))
+            ->assertSessionHasNoErrors()->assertRedirect();
+        $purchase = Purchase::firstOrFail();
+        $this->assertNull($purchase->supplier_id);
+        $this->assertSame(2500.0, (float) $purchase->total);
+
+        $this->actingAs($manager)->get(route('admin.purchases.show', $purchase))->assertOk()->assertSee('No supplier');
+
+        // More than the purchase is refused; the full total comes out of cash as a purchase payment.
+        $this->actingAs($manager)->post(route('admin.purchases.receive', $purchase), [
+            'pay_now' => 3000, 'method' => 'cash', 'account_id' => $cash->id,
+        ])->assertSessionHas('error');
+        $this->assertSame('ordered', $purchase->fresh()->status);
+
+        $this->actingAs($manager)->post(route('admin.purchases.receive', $purchase), [
+            'pay_now' => 2500, 'method' => 'cash', 'account_id' => $cash->id,
+        ])->assertSessionHas('success');
+
+        $this->assertSame('received', $purchase->fresh()->status);
+        $this->assertSame(20, (int) $m->fresh()->stock);
+        $this->assertSame(2500.0, $cash->fresh()->balance());
+        $this->assertDatabaseHas('account_transactions', [
+            'account_id' => $cash->id, 'direction' => 'out', 'amount' => 2500, 'type' => 'purchase_payment',
+            'reference_type' => Purchase::class, 'reference_id' => $purchase->id,
+        ]);
+        $this->assertSame(0, SupplierPayment::count());
+
+        $this->actingAs($manager)->get(route('admin.purchases.invoice', $purchase))->assertOk()->assertSee('No supplier');
+        $this->actingAs($manager)->get(route('admin.purchases.index'))->assertOk()->assertSee('No supplier');
+        $this->actingAs($manager)->get(route('admin.reports.cost'))->assertOk()->assertSee('Purchase paid (no supplier)');
     }
 }

@@ -32,9 +32,9 @@
                     </form>
                 @else
                     <a href="{{ route('admin.suppliers.edit', $supplier) }}" class="btn-secondary">Edit</a>
-                    <form method="POST" action="{{ route('admin.suppliers.destroy', $supplier) }}" x-data
+                    <form method="POST" action="{{ route('admin.suppliers.archive', $supplier) }}" x-data
                           @submit="if (! confirm(@js('Archive ' . $supplier->name . '? Their payment history is kept.'))) $event.preventDefault()">
-                        @csrf @method('DELETE')
+                        @csrf @method('PATCH')
                         <button type="submit" class="btn-secondary text-rose-600">Archive</button>
                     </form>
                 @endif

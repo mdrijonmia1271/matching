@@ -23,7 +23,6 @@
             ['admin.pos.index', 'Counter (POS)', 'M9 2h6a1 1 0 011 1v3H8V3a1 1 0 011-1zM4 8h16l-1 12a2 2 0 01-2 2H7a2 2 0 01-2-2L4 8zm8 4v6m-3-3h6', 'admin.pos.*', 'pos.sell'],
             ['admin.orders.index', 'Orders', 'M3 3h2l2.4 12.1a2 2 0 002 1.6h7.7a2 2 0 002-1.6L21 7H6', 'admin.orders.*', 'orders.view'],
             ['admin.returns.index', 'Returns', 'M3 10h11a4 4 0 010 8h-3m-8-8l4-4m-4 4l4 4', 'admin.returns.*', 'orders.view'],
-            ['admin.customers.index', 'Customers', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', 'admin.customers.*', 'customers.view'],
             ['admin.advance-orders.index', 'Advance orders', 'M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2zm7-9l1.2 2.4 2.8.4-2 2 .5 2.7L12 17l-2.5 1.5.5-2.7-2-2 2.8-.4z', 'admin.advance-orders.*', 'orders.view'],
             ['admin.customer-dues.index', 'Customer dues', 'M12 8c-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2m0-8c1.1 0 2.1.4 2.6 1M12 8V7m0 1v8m0 0v1m0-1c-1.1 0-2.1-.4-2.6-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'admin.customer-dues.*', 'customers.view'],
             ['admin.coupons.index', 'Coupons', 'M9 7h6m-6 4h6m-8 8h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z', 'admin.coupons.*', 'marketing.manage'],
@@ -40,11 +39,24 @@
         ]],
         ['Purchases', [
             ['admin.purchases.index', 'Purchases', 'M20 7l-8-4-8 4m16 0v10l-8 4-8-4V7m16 0l-8 4m0 0L4 7m8 4v10M9 4.5l8 4', 'admin.purchases.*', 'purchases.view'],
+        ]],
+        ['Contacts', [
+            ['admin.customers.index', 'Customers', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', 'admin.customers.*', 'customers.view'],
             ['admin.suppliers.index', 'Suppliers', 'M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10h2m8 0h2m-2 0V8h4l3 3v5h-2', 'admin.suppliers.*', 'purchases.view'],
         ]],
         ['Finance', [
             ['admin.accounts.index', 'Accounts', 'M3 10h18M5 10V20M9 10V20M15 10V20M19 10V20M3 20h18M12 3l9 5H3l9-5z', 'admin.accounts.*', 'accounting.view'],
         ]],
+        // Collapsible: the third element marks a section that folds under its heading.
+        ['Reports', [
+            ['admin.reports.purchases', 'Purchase report', 'M9 5l7 7-7 7', 'admin.reports.purchases', 'reports.view'],
+            ['admin.reports.sales', 'Sales report', 'M9 5l7 7-7 7', 'admin.reports.sales', 'reports.view'],
+            ['admin.reports.income', 'Income report', 'M9 5l7 7-7 7', 'admin.reports.income', 'reports.view'],
+            ['admin.reports.cost', 'Cost report', 'M9 5l7 7-7 7', 'admin.reports.cost', 'reports.view'],
+            ['admin.reports.profit-loss', 'Profit / Loss', 'M9 5l7 7-7 7', 'admin.reports.profit-loss', 'reports.view'],
+            ['admin.reports.sale-profit', 'Sale profit', 'M9 5l7 7-7 7', 'admin.reports.sale-profit', 'reports.view'],
+            ['admin.reports.cash-book', 'Cash book', 'M9 5l7 7-7 7', 'admin.reports.cash-book', 'reports.view'],
+        ], true],
         ['Administration', [
             ['admin.staff.index', 'Staff', 'M17 20h5v-2a3 3 0 00-5.4-1.8M9 20H4v-2a3 3 0 015.4-1.8M15 7a3 3 0 11-6 0 3 3 0 016 0z', 'admin.staff.*', 'staff.view'],
             ['admin.roles.index', 'Roles & permissions', 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z', 'admin.roles.*', 'staff.view'],
@@ -66,9 +78,36 @@
         </div>
 
         <nav class="flex-1 space-y-4 overflow-y-auto p-3">
-            @foreach($sections as [$section, $items])
-                @php $visible = array_filter($items, fn ($item) => $item[4] === null || $admin->can($item[4])); @endphp
+            @foreach($sections as $entry)
+                @php
+                    [$section, $items] = $entry;
+                    $visible = array_filter($items, fn ($item) => $item[4] === null || $admin->can($item[4]));
+                    $collapsible = $entry[2] ?? false;
+                    $sectionActive = collect($visible)->contains(fn ($item) => request()->routeIs($item[3]));
+                @endphp
                 @continue(! $visible)
+
+                @if($collapsible)
+                    <div x-data="{ open: @js($sectionActive) }" class="space-y-1">
+                        <button type="button" @click="open = !open" :aria-expanded="open"
+                                class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition {{ $sectionActive ? 'text-white' : 'hover:bg-white/10 hover:text-white' }}">
+                            <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                            <span class="flex-1 text-left">{{ $section }}</span>
+                            <svg class="h-4 w-4 text-sky-400 transition-transform" :class="open ? '' : '-rotate-90'" fill="currentColor" viewBox="0 0 20 20"><path d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg>
+                        </button>
+                        <div x-show="open" x-cloak class="space-y-0.5 pl-4">
+                            @foreach($visible as [$route, $label, $icon, $pattern])
+                                @php $active = request()->routeIs($pattern); @endphp
+                                <a href="{{ route($route) }}"
+                                   class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition {{ $active ? 'bg-brand-600 text-white' : 'hover:bg-white/10 hover:text-white' }}">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}"/></svg>
+                                    {{ $label }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                    @continue
+                @endif
 
                 <div class="space-y-1">
                     @if($section)

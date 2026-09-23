@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProductVariant;
+use App\Models\Purchase;
+use App\Models\PurchaseItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -45,8 +47,38 @@ class VariantLookupController extends Controller implements HasMiddleware
             ->limit(20)
             ->get();
 
-        $results = collect($exact ? [$exact] : [])->merge($matches)->map->toLookupArray()->values();
+        $variants = collect($exact ? [$exact] : [])->merge($matches);
+        $lastCosts = $this->lastPurchaseCosts($variants->pluck('id')->all());
+
+        $results = $variants->map(fn (ProductVariant $variant) => $variant->toLookupArray() + [
+            'last_cost' => $lastCosts[$variant->id] ?? null,
+        ])->values();
 
         return response()->json(['exact' => (bool) $exact, 'results' => $results]);
+    }
+
+    /**
+     * What was last paid per unit for each variant on a received purchase, so
+     * a new purchase can start from it when no purchase price is saved.
+     *
+     * @param  list<int>  $variantIds
+     * @return array<int, float>
+     */
+    protected function lastPurchaseCosts(array $variantIds): array
+    {
+        if (! $variantIds) {
+            return [];
+        }
+
+        return PurchaseItem::query()
+            ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+            ->whereIn('purchases.status', Purchase::COUNTED_STATUSES)
+            ->whereIn('purchase_items.variant_id', $variantIds)
+            ->orderByDesc('purchases.received_at')
+            ->orderByDesc('purchase_items.id')
+            ->get(['purchase_items.variant_id', 'purchase_items.unit_cost'])
+            ->unique('variant_id')
+            ->mapWithKeys(fn ($item) => [$item->variant_id => (float) $item->unit_cost])
+            ->all();
     }
 }

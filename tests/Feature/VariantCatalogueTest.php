@@ -9,6 +9,7 @@ use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Services\CartService;
 use App\Services\StockService;
+use App\Support\Barcode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -18,9 +19,6 @@ use Tests\TestCase;
 class VariantCatalogueTest extends TestCase
 {
     use RefreshDatabase;
-
-    /** A real EAN-13 with a correct check digit. */
-    protected const EAN = '4006381333931';
 
     protected function setUp(): void
     {
@@ -37,18 +35,20 @@ class VariantCatalogueTest extends TestCase
         return array_merge([
             'category_id' => $category->id,
             'name' => 'Premium Kurti',
+            'short_description' => 'Short text', 'description' => 'Full text',
             'cost_price' => 800,
             'price' => 1200,
             'is_active' => 1,
             'has_variants' => 1,
             'variants' => [
-                ['color' => 'Black', 'size' => 'S', 'opening_stock' => 3, 'is_active' => 1],
-                ['color' => 'Black', 'size' => 'M', 'opening_stock' => 5, 'is_active' => 1, 'barcode' => self::EAN],
-                ['color' => 'White', 'size' => 'M', 'opening_stock' => 0, 'is_active' => 1, 'price' => 1300, 'cost_price' => 850],
+                ['color' => 'Black', 'size' => 'S', 'is_active' => 1],
+                ['color' => 'Black', 'size' => 'M', 'is_active' => 1],
+                ['color' => 'White', 'size' => 'M', 'is_active' => 1, 'price' => 1300, 'cost_price' => 850],
             ],
         ], $overrides);
     }
 
+    /** The form takes no stock: it arrives afterwards through the ledger (Black/S 3, Black/M 5, White/M 0). */
     protected function createKurti(): Product
     {
         $this->actingAs($this->staff())
@@ -58,7 +58,11 @@ class VariantCatalogueTest extends TestCase
 
         auth()->logout();
 
-        return Product::where('name', 'Premium Kurti')->firstOrFail();
+        $product = Product::where('name', 'Premium Kurti')->firstOrFail();
+        app(StockService::class)->move($this->variant($product, 'Black', 'S'), 'in', 3, 'opening');
+        app(StockService::class)->move($this->variant($product, 'Black', 'M'), 'in', 5, 'opening');
+
+        return $product->fresh();
     }
 
     protected function variant(Product $product, string $color, string $size): ProductVariant
@@ -91,7 +95,12 @@ class VariantCatalogueTest extends TestCase
 
         $this->assertMatchesRegularExpression('/^KRT-BLK-S-\d{3}$/', $blackS->sku);
         $this->assertSame(3, ProductVariant::distinct()->count('sku'));
-        $this->assertSame(self::EAN, $blackM->barcode);
+
+        // Every variant gets its own valid barcode without asking.
+        foreach ([$blackS, $blackM, $whiteM] as $variant) {
+            $this->assertNull(Barcode::validationError((string) $variant->barcode));
+        }
+        $this->assertSame(3, ProductVariant::distinct()->count('barcode'));
 
         $this->assertSame(3, $blackS->stock);
         $this->assertSame(0, $whiteM->stock);
@@ -106,28 +115,29 @@ class VariantCatalogueTest extends TestCase
         );
     }
 
-    public function test_duplicate_and_invalid_skus_and_barcodes_are_rejected(): void
+    public function test_skus_barcodes_and_stock_cannot_be_typed_into_the_form(): void
     {
         $existing = $this->createKurti();
         $admin = $this->staff();
+        $taken = $this->variant($existing, 'Black', 'M');
 
         $this->actingAs($admin)->post(route('admin.products.store'), $this->payload([
             'name' => 'Second Kurti',
-            'variants' => [['color' => 'Red', 'size' => 'M', 'barcode' => self::EAN, 'is_active' => 1]],
-        ]))->assertSessionHasErrors('variants.0.barcode');
+            'sku' => 'MY-SKU',
+            'variants' => [['color' => 'Red', 'size' => 'M', 'sku' => $taken->sku, 'barcode' => $taken->barcode, 'opening_stock' => 9, 'is_active' => 1]],
+        ]))->assertSessionHasNoErrors();
 
-        $this->actingAs($admin)->post(route('admin.products.store'), $this->payload([
-            'name' => 'Second Kurti',
-            'variants' => [['color' => 'Red', 'size' => 'M', 'barcode' => '4006381333932', 'is_active' => 1]],
-        ]))->assertSessionHasErrors('variants.0.barcode');
+        $red = Product::where('name', 'Second Kurti')->firstOrFail()->variants()->sole();
+        $this->assertNotSame($taken->sku, $red->sku);
+        $this->assertNotSame($taken->barcode, $red->barcode);
+        $this->assertNotSame('MY-SKU', $red->product->sku);
+        $this->assertSame(0, $red->stock);
+    }
 
-        $this->actingAs($admin)->post(route('admin.products.store'), $this->payload([
-            'name' => 'Second Kurti',
-            'variants' => [
-                ['color' => 'Red', 'size' => 'M', 'sku' => 'DUP-1', 'is_active' => 1],
-                ['color' => 'Red', 'size' => 'L', 'sku' => 'DUP-1', 'is_active' => 1],
-            ],
-        ]))->assertSessionHasErrors('variants.1.sku');
+    public function test_repeated_variants_are_rejected(): void
+    {
+        $this->createKurti();
+        $admin = $this->staff();
 
         $this->actingAs($admin)->post(route('admin.products.store'), $this->payload([
             'name' => 'Second Kurti',
@@ -136,13 +146,6 @@ class VariantCatalogueTest extends TestCase
                 ['color' => 'red', 'size' => 'm', 'is_active' => 1],
             ],
         ]))->assertSessionHasErrors('variants.1.size');
-
-        $this->actingAs($admin)->post(route('admin.products.store'), $this->payload([
-            'name' => 'Second Kurti',
-            'has_variants' => 0,
-            'sku' => $existing->variants()->first()->sku,
-            'variants' => [['opening_stock' => 1]],
-        ]))->assertSessionHasErrors('sku');
 
         $this->assertSame(1, Product::count());
     }
@@ -197,18 +200,20 @@ class VariantCatalogueTest extends TestCase
     {
         $admin = $this->staff();
         $category = Category::create(['name' => 'Hijab', 'is_active' => true]);
-        $fields = ['category_id' => $category->id, 'name' => 'White Chiffon Hijab', 'price' => 650, 'is_active' => 1, 'has_variants' => 0];
+        $fields = ['category_id' => $category->id, 'name' => 'White Chiffon Hijab', 'short_description' => 'Short text', 'description' => 'Full text', 'cost_price' => 500, 'price' => 650, 'is_active' => 1, 'has_variants' => 0];
 
-        $this->actingAs($admin)->post(route('admin.products.store'), $fields + ['variants' => [['opening_stock' => 10]]])
+        $this->actingAs($admin)->post(route('admin.products.store'), $fields + ['variants' => [['id' => null]]])
             ->assertSessionHasNoErrors();
 
         $product = Product::firstOrFail();
         $variant = $product->variants()->firstOrFail();
         $this->assertSame($product->sku, $variant->sku);
+        $this->assertSame(0, $variant->stock);
 
+        app(StockService::class)->move($variant, 'in', 10, 'opening');
         app(StockService::class)->move($variant, 'out', 4, 'offline_sale');
 
-        // The form was opened before that sale and still carries the old numbers.
+        // A stock number posted with the form is ignored.
         $this->actingAs($admin)->put(route('admin.products.update', $product), array_merge($fields, [
             'price' => 700,
             'variants' => [['id' => $variant->id, 'opening_stock' => 10]],
@@ -253,7 +258,7 @@ class VariantCatalogueTest extends TestCase
             ->assertSessionHasNoErrors();
         $cotton = Category::where('name', 'Cotton Kurti')->firstOrFail();
 
-        $single = ['name' => 'Block Print Kurti', 'price' => 1500, 'is_active' => 1, 'has_variants' => 0, 'variants' => [['opening_stock' => 2]]];
+        $single = ['name' => 'Block Print Kurti', 'short_description' => 'Short text', 'description' => 'Full text', 'cost_price' => 500, 'price' => 1500, 'is_active' => 1, 'has_variants' => 0, 'variants' => [['id' => null]]];
 
         $this->actingAs($admin)->post(route('admin.products.store'), $single + ['category_id' => $saree->id, 'subcategory_id' => $cotton->id])
             ->assertSessionHasErrors('subcategory_id');
@@ -285,8 +290,8 @@ class VariantCatalogueTest extends TestCase
         $blackM = $this->variant($product, 'Black', 'M');
 
         $this->actingAs($admin)->get(route('admin.products.create'))->assertOk();
-        $this->actingAs($admin)->get(route('admin.products.edit', $product))->assertOk()->assertSee($blackM->sku);
-        $this->actingAs($admin)->get(route('admin.products.index', ['q' => self::EAN]))->assertOk()->assertSee('Premium Kurti');
+        $this->actingAs($admin)->get(route('admin.products.edit', $product))->assertOk()->assertSee('Maroon', false)->assertDontSee($blackM->sku);
+        $this->actingAs($admin)->get(route('admin.products.index', ['q' => $blackM->barcode]))->assertOk()->assertSee('Premium Kurti');
         $this->actingAs($admin)->get(route('admin.stock.create', ['variant' => $blackM->id]))->assertOk()->assertSee('Black / M');
         $this->actingAs($admin)->get(route('admin.stock.index', ['variant' => $blackM->id]))->assertOk()->assertSee($blackM->sku);
         $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk();
@@ -299,7 +304,7 @@ class VariantCatalogueTest extends TestCase
         ])->assertSessionHas('success');
         $this->actingAs($admin)->get(route('admin.brands.index'))->assertOk()->assertSee('Aarong');
 
-        $this->actingAs($admin)->getJson(route('admin.variants.search', ['q' => self::EAN]))
+        $this->actingAs($admin)->getJson(route('admin.variants.search', ['q' => $blackM->barcode]))
             ->assertOk()
             ->assertJsonPath('exact', true)
             ->assertJsonPath('results.0.id', $blackM->id)

@@ -7,10 +7,8 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
-use App\Models\ProductVariant;
 use App\Services\AuditLogger;
 use App\Services\ProductService;
-use App\Support\Barcode;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -82,7 +80,7 @@ class ProductController extends Controller implements HasMiddleware
         }
 
         try {
-            $product = $this->products->create($data, $rows, $request->boolean('generate_barcodes'));
+            $product = $this->products->create($data, $rows);
         } catch (RuntimeException $e) {
             if (isset($data['image'])) {
                 Storage::disk('public')->delete($data['image']);
@@ -117,7 +115,7 @@ class ProductController extends Controller implements HasMiddleware
         }
 
         try {
-            $result = $this->products->update($product, $data, $rows, $request->boolean('generate_barcodes'));
+            $result = $this->products->update($product, $data, $rows);
         } catch (RuntimeException $e) {
             if (isset($data['image'])) {
                 Storage::disk('public')->delete($data['image']);
@@ -146,17 +144,20 @@ class ProductController extends Controller implements HasMiddleware
         return redirect()->route('admin.products.index')->with('success', 'Product updated.');
     }
 
-    /**
-     * Archive rather than delete: past orders and the stock ledger reference the
-     * product. Images are kept so a restore brings it back intact.
-     */
+    /** Deletes the product for good; see ProductService::delete for what is refused. */
     public function destroy(Product $product)
     {
-        $product->delete();
+        try {
+            $images = $this->products->delete($product);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
-        AuditLogger::log('products', 'archived', $product, 'Product ' . $product->name . ' archived');
+        Storage::disk('public')->delete($images);
 
-        return back()->with('success', $product->name . ' archived. It is hidden from the shop and can be restored.');
+        AuditLogger::log('products', 'deleted', null, 'Product ' . $product->name . ' (' . $product->sku . ') deleted permanently');
+
+        return back()->with('success', $product->name . ' deleted permanently.');
     }
 
     public function restore(Product $product)
@@ -193,24 +194,13 @@ class ProductController extends Controller implements HasMiddleware
             'category_id' => ['required', Rule::exists('categories', 'id')->whereNull('parent_id')],
             'subcategory_id' => ['nullable', Rule::exists('categories', 'id')->where('parent_id', (int) $request->input('category_id'))],
             'brand_id' => ['nullable', 'exists:brands,id'],
+            // Slug and product SKU are not on the form: the Product model generates them on create and keeps them after.
             'name' => ['required', 'string', 'max:180'],
-            'slug' => ['nullable', 'string', 'max:200', 'alpha_dash', Rule::unique('products', 'slug')->ignore($product?->id)],
-            'sku' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9._\-\/]+$/', Rule::unique('products', 'sku')->ignore($product?->id),
-                function (string $attribute, mixed $value, Closure $fail) use ($product) {
-                    $taken = ProductVariant::withTrashed()->where('sku', $value)
-                        ->when($product, fn ($q) => $q->where('product_id', '!=', $product->id))
-                        ->exists();
-
-                    if ($taken) {
-                        $fail('This SKU is already used by a variant of another product.');
-                    }
-                }],
-            'short_description' => ['nullable', 'string', 'max:300'],
-            'description' => ['nullable', 'string', 'max:20000'],
-            'cost_price' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
+            'short_description' => ['required', 'string', 'max:300'],
+            'description' => ['required', 'string', 'max:20000'],
+            'cost_price' => ['required', 'numeric', 'min:0', 'max:100000000'],
             'price' => ['required', 'numeric', 'min:0', 'max:100000000'],
             'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:price'],
-            'tags' => ['nullable', 'string', 'max:500'],
             'image' => ['nullable', 'image', 'max:2048'],
             'gallery' => ['nullable', 'array', 'max:' . Product::MAX_GALLERY_IMAGES,
                 function (string $attribute, mixed $value, Closure $fail) use ($product) {
@@ -230,26 +220,19 @@ class ProductController extends Controller implements HasMiddleware
             'variants.*.id' => ['nullable', 'integer'],
             'variants.*.color' => ['nullable', 'string', 'max:40'],
             'variants.*.size' => ['nullable', 'string', 'max:40'],
-            'variants.*.sku' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9._\-\/]+$/', 'distinct:ignore_case'],
-            'variants.*.barcode' => ['nullable', 'string', 'max:64', 'distinct'],
             'variants.*.cost_price' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
             'variants.*.price' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
             'variants.*.sale_price' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
-            'variants.*.opening_stock' => ['nullable', 'integer', 'min:0', 'max:1000000'],
             'variants.*.low_stock_threshold' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'variants.*.is_active' => ['nullable', 'boolean'],
         ], [
-            'variants.*.sku.distinct' => 'Two variants have the same SKU.',
-            'variants.*.barcode.distinct' => 'Two variants have the same barcode.',
-            'variants.*.sku.regex' => 'SKUs may only contain letters, numbers and . _ - /',
             'subcategory_id.exists' => 'The subcategory must belong to the selected category.',
         ]);
 
-        $rows = array_values($data['variants']);
+        // A row with nothing but unknown fields is dropped by validation; keep it as an empty row.
+        $rows = array_values(array_replace(array_fill_keys(array_keys((array) $request->input('variants')), []), $data['variants'] ?? []));
         unset($data['variants'], $data['gallery'], $data['image'], $data['image_order']);
 
-        $data['tags'] = collect(explode(',', (string) ($data['tags'] ?? '')))
-            ->map(fn ($tag) => trim($tag))->filter()->unique()->take(20)->values()->all() ?: null;
         $data['has_variants'] = $hasVariants;
         $data['is_active'] = $request->boolean('is_active');
         $data['is_featured'] = $request->boolean('is_featured');
@@ -290,22 +273,6 @@ class ProductController extends Controller implements HasMiddleware
                 }
 
                 $combinations["$color|$size"] = true;
-            }
-
-            $fields = $hasVariants ? ['sku', 'barcode'] : ['barcode'];
-
-            foreach ($fields as $field) {
-                $value = trim((string) ($row[$field] ?? ''));
-
-                if ($value !== '' && ProductVariant::withTrashed()->where($field, $value)->when($id, fn ($q) => $q->whereKeyNot($id))->exists()) {
-                    $errors["variants.$i.$field"] = "$n: " . strtoupper($field) . " $value is already used by another variant.";
-                }
-            }
-
-            $barcode = trim((string) ($row['barcode'] ?? ''));
-
-            if ($barcode !== '' && ($problem = Barcode::validationError($barcode))) {
-                $errors["variants.$i.barcode"] = "$n: the barcode $problem.";
             }
 
             $regular = filled($row['price'] ?? null) ? (float) $row['price'] : $productPrice;

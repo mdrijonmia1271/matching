@@ -273,7 +273,7 @@ class SecurityAndPermissionsTest extends TestCase
         $product = $this->product(['price' => 1000]);
 
         $this->actingAs($admin)->put(route('admin.products.update', $product), [
-            'category_id' => $product->category_id, 'name' => $product->name,
+            'category_id' => $product->category_id, 'name' => $product->name, 'short_description' => 'Short text', 'description' => 'Full text', 'cost_price' => 500,
             'price' => 1200, 'is_active' => 1,
             'variants' => [['id' => $product->variants()->value('id')]],
         ])->assertRedirect();

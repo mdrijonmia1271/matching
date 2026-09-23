@@ -84,7 +84,7 @@
               get remaining() { return Math.max(0, this.total - this.taken); },
               get overpaid() { return this.taken > this.total; },
               get named() { return this.customer !== null || this.newCustomer; },
-              money(value) { return @js(\App\Support\Money::symbol()) + ' ' + (Number(value) || 0).toFixed(2); },
+              money(value) { return ({!! \App\Support\Money::jsFormatter() !!})(value); },
           }"
           @submit="submitting = true">
         @csrf

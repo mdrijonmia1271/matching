@@ -35,7 +35,7 @@ class SupplierController extends Controller implements HasMiddleware
             new Middleware('can:purchases.view', only: ['index', 'show', 'export']),
             new Middleware('can:reports.export', only: ['export']),
             new Middleware('can:purchases.create', only: ['create', 'store']),
-            new Middleware('can:purchases.edit', only: ['edit', 'update', 'destroy', 'restore']),
+            new Middleware('can:purchases.edit', only: ['edit', 'update', 'destroy', 'archive', 'restore']),
         ];
     }
 
@@ -144,8 +144,30 @@ class SupplierController extends Controller implements HasMiddleware
         return redirect()->route('admin.suppliers.show', $supplier)->with('success', $new ? 'Supplier updated.' : 'Nothing changed.');
     }
 
-    /** Suppliers are archived, never deleted: their payments keep pointing at them. */
+    /**
+     * Deletes the supplier for good. Refused while any purchase or payment
+     * points at them, because those records would lose who they belong to.
+     */
     public function destroy(Supplier $supplier)
+    {
+        $blockers = array_filter([
+            $supplier->purchases()->exists() ? 'purchases' : null,
+            $supplier->payments()->exists() ? 'payments' : null,
+        ]);
+
+        if ($blockers) {
+            return back()->with('error', $supplier->name . ' cannot be deleted: they have ' . implode(' and ', $blockers) . ' on record.');
+        }
+
+        $supplier->forceDelete();
+
+        AuditLogger::log('purchases', 'supplier_deleted', null, 'Supplier ' . $supplier->name . ' deleted permanently');
+
+        return redirect()->route('admin.suppliers.index')->with('success', $supplier->name . ' deleted permanently.');
+    }
+
+    /** Hides a supplier who has history and so cannot be deleted; their payments are kept. */
+    public function archive(Supplier $supplier)
     {
         $supplier->delete();
 

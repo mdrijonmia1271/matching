@@ -85,7 +85,7 @@
               get remaining() { return Math.max(0, this.total - this.taken); },
               get overpaid() { return this.taken > this.total; },
               get change() { return Math.max(0, (Number(this.cashGiven) || 0) - this.taken); },
-              money(value) { return @js(\App\Support\Money::symbol()) + ' ' + (Number(value) || 0).toFixed(2); },
+              money(value) { return ({!! \App\Support\Money::jsFormatter() !!})(value); },
           }"
           @submit="submitting = true">
         @csrf

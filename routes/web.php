@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\NewsletterController as AdminNewsletterController
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\RefundController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReturnController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\SupplierPaymentController;
@@ -138,7 +139,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('categories', AdminCategoryController::class)->except('show');
-    Route::resource('products', AdminProductController::class)->except('show');
+    Route::resource('products', AdminProductController::class)->except('show')->withTrashed(['destroy']);
     Route::patch('products/{product}/restore', [AdminProductController::class, 'restore'])
         ->withTrashed()->name('products.restore');
     Route::delete('product-images/{image}', [AdminProductController::class, 'destroyImage'])->name('products.images.destroy');
@@ -183,7 +184,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('returns/{return}/receive', [ReturnController::class, 'receive'])->name('returns.receive');
 
     // Archived customers stay viewable, and editable so they can be corrected before restoring.
-    Route::resource('customers', CustomerController::class)->withTrashed(['show', 'edit', 'update']);
+    Route::resource('customers', CustomerController::class)->withTrashed(['show', 'edit', 'update', 'destroy']);
+    Route::patch('customers/{customer}/archive', [CustomerController::class, 'archive'])->name('customers.archive');
     Route::patch('customers/{customer}/restore', [CustomerController::class, 'restore'])
         ->withTrashed()->name('customers.restore');
     Route::post('customers/{customer}/payments', [CustomerPaymentController::class, 'store'])->name('customers.payments.store');
@@ -198,16 +200,28 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     // Export is registered before the resource so "export" is not read as a supplier id.
     Route::get('suppliers/export', [SupplierController::class, 'export'])->name('suppliers.export');
-    Route::resource('suppliers', SupplierController::class)->withTrashed(['show', 'edit', 'update']);
+    Route::resource('suppliers', SupplierController::class)->withTrashed(['show', 'edit', 'update', 'destroy']);
+    Route::patch('suppliers/{supplier}/archive', [SupplierController::class, 'archive'])->name('suppliers.archive');
     Route::patch('suppliers/{supplier}/restore', [SupplierController::class, 'restore'])
         ->withTrashed()->name('suppliers.restore');
     Route::post('suppliers/{supplier}/payments', [SupplierPaymentController::class, 'store'])->name('suppliers.payments.store');
 
     // Export comes before the resource so "export" is not read as a purchase number.
     Route::get('purchases/export', [PurchaseController::class, 'export'])->name('purchases.export');
+    Route::get('purchases/{purchase}/invoice', [PurchaseController::class, 'invoice'])->name('purchases.invoice');
     Route::resource('purchases', PurchaseController::class)->except('destroy');
     Route::post('purchases/{purchase}/receive', [PurchaseController::class, 'receive'])->name('purchases.receive');
     Route::post('purchases/{purchase}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
+
+    Route::prefix('reports')->name('reports.')->controller(ReportController::class)->group(function () {
+        Route::get('purchases', 'purchases')->name('purchases');
+        Route::get('sales', 'sales')->name('sales');
+        Route::get('income', 'income')->name('income');
+        Route::get('cost', 'cost')->name('cost');
+        Route::get('profit-loss', 'profitLoss')->name('profit-loss');
+        Route::get('sale-profit', 'saleProfit')->name('sale-profit');
+        Route::get('cash-book', 'cashBook')->name('cash-book');
+    });
 
     Route::get('accounts', [AccountController::class, 'index'])->name('accounts.index');
     Route::post('accounts', [AccountController::class, 'store'])->name('accounts.store');

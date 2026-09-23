@@ -41,9 +41,10 @@ class ProductGalleryTest extends TestCase
         return array_merge([
             'category_id' => $category->id,
             'name' => 'Rang Bangladesh Saree',
+            'short_description' => 'Short text', 'description' => 'Full text', 'cost_price' => 500,
             'price' => 2400,
             'is_active' => 1,
-            'variants' => [['opening_stock' => 4]],
+            'variants' => [['id' => null]],
         ], $overrides);
     }
 

@@ -35,7 +35,7 @@ class PurchaseController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:purchases.view', only: ['index', 'show', 'export']),
+            new Middleware('can:purchases.view', only: ['index', 'show', 'invoice', 'export']),
             new Middleware('can:reports.export', only: ['export']),
             new Middleware('can:purchases.create', only: ['create', 'store']),
             new Middleware('can:purchases.edit', only: ['edit', 'update', 'receive', 'cancel']),
@@ -109,11 +109,19 @@ class PurchaseController extends Controller implements HasMiddleware
             ->with('success', 'Purchase ' . $purchase->number . ' saved. Receive it when the goods arrive.');
     }
 
+    /** A print-ready A4 copy of the purchase; the browser saves it as PDF. */
+    public function invoice(Purchase $purchase)
+    {
+        $purchase->load(['items.variant.product', 'supplier', 'creator:id,name', 'receiver:id,name']);
+
+        return view('admin.purchases.invoice', ['purchase' => $purchase]);
+    }
+
     public function show(Purchase $purchase, AccountService $accounts)
     {
         $purchase->load(['items.variant.product', 'supplier', 'creator:id,name', 'receiver:id,name']);
         $methods = SupplierService::methods();
-        $balance = $purchase->supplier->balance();
+        $balance = $purchase->supplier?->balance() ?? 0.0;
 
         return view('admin.purchases.show', [
             'purchase' => $purchase,
@@ -180,9 +188,12 @@ class PurchaseController extends Controller implements HasMiddleware
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', sprintf('Purchase %s received. %s added to stock and %s billed to %s.',
-            $received->number, number_format($received->items->sum('quantity')) . ' units',
-            Money::format($received->total), $received->supplier->name));
+        $units = number_format($received->items->sum('quantity')) . ' units';
+
+        return back()->with('success', $received->supplier
+            ? sprintf('Purchase %s received. %s added to stock and %s billed to %s.',
+                $received->number, $units, Money::format($received->total), $received->supplier->name)
+            : sprintf('Purchase %s received. %s added to stock.', $received->number, $units));
     }
 
     public function cancel(Request $request, Purchase $purchase)
@@ -262,7 +273,8 @@ class PurchaseController extends Controller implements HasMiddleware
     protected function validated(Request $request): array
     {
         return $request->validate([
-            'supplier_id' => ['required', Rule::exists('suppliers', 'id')->whereNull('deleted_at')],
+            // Optional: goods can be bought without a supplier, e.g. for cash from the market.
+            'supplier_id' => ['nullable', Rule::exists('suppliers', 'id')->whereNull('deleted_at')],
             'status' => ['required', Rule::in(Purchase::OPEN_STATUSES)],
             'purchase_date' => ['required', 'date', 'before_or_equal:today'],
             'invoice_number' => ['nullable', 'string', 'max:100'],
@@ -274,7 +286,6 @@ class PurchaseController extends Controller implements HasMiddleware
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'items.*.unit_cost' => ['required', 'numeric', 'min:0', 'max:10000000'],
         ], [
-            'supplier_id.required' => 'Choose the supplier these goods came from.',
             'supplier_id.exists' => 'Choose an active supplier.',
             'items.required' => 'Add at least one product to the purchase.',
             'purchase_date.before_or_equal' => 'A purchase cannot be dated in the future.',

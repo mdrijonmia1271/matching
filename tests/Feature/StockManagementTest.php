@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Services\CartService;
+use App\Services\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -106,11 +107,12 @@ class StockManagementTest extends TestCase
     {
         $admin = $this->admin();
         $category = Category::create(['name' => 'Books', 'is_active' => true]);
-        $fields = ['category_id' => $category->id, 'name' => 'Laravel in Action', 'price' => 1200, 'is_active' => 1];
+        $fields = ['category_id' => $category->id, 'name' => 'Laravel in Action', 'short_description' => 'Short text', 'description' => 'Full text', 'cost_price' => 500, 'price' => 1200, 'is_active' => 1];
 
-        $this->actingAs($admin)->post(route('admin.products.store'), $fields + ['variants' => [['opening_stock' => 7]]]);
+        $this->actingAs($admin)->post(route('admin.products.store'), $fields + ['variants' => [['id' => null]]]);
         $product = Product::firstOrFail();
         $variant = $product->variants()->firstOrFail();
+        app(StockService::class)->move($variant, 'in', 7, 'opening');
 
         // Saving the product form again never changes stock, whatever number is sent.
         $this->actingAs($admin)->put(route('admin.products.update', $product), $fields + ['variants' => [['id' => $variant->id, 'opening_stock' => 4]]]);

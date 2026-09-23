@@ -60,7 +60,9 @@
                     <tr>
                         <th class="px-4 py-3">Product</th>
                         <th class="px-4 py-3">Category</th>
-                        <th class="px-4 py-3 text-right">Price</th>
+                        <th class="px-4 py-3 text-right">Purchase price</th>
+                        <th class="px-4 py-3 text-right">Sale price</th>
+                        <th class="px-4 py-3 text-right">Discounted price</th>
                         <th class="px-4 py-3 text-center">Variants</th>
                         <th class="px-4 py-3 text-center">Stock</th>
                         <th class="px-4 py-3 text-center">Status</th>
@@ -86,10 +88,18 @@
                                 {{ $product->category?->name ?? '—' }}
                                 @if($product->subcategory)<span class="block text-xs text-slate-400">&rsaquo; {{ $product->subcategory->name }}</span>@endif
                             </td>
-                            <td class="px-4 py-3 text-right">
-                                <span class="font-semibold text-slate-900">@money($product->current_price)</span>
+                            <td class="whitespace-nowrap px-4 py-3 text-right text-slate-600">
+                                {{ $product->cost_price !== null ? \App\Support\Money::format($product->cost_price) : '—' }}
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-3 text-right {{ $product->on_sale ? 'text-slate-400 line-through' : 'font-semibold text-slate-900' }}">
+                                @money($product->price)
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-3 text-right">
                                 @if($product->on_sale)
-                                    <span class="block text-xs text-slate-400 line-through">@money($product->price)</span>
+                                    <span class="font-semibold text-emerald-600">@money($product->current_price)</span>
+                                    <span class="block text-xs text-rose-500">{{ $product->discount_label }}</span>
+                                @else
+                                    <span class="text-slate-300">—</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-center text-slate-600">
@@ -118,29 +128,26 @@
                                                 @csrf @method('PATCH')
                                                 <button class="text-xs font-semibold text-emerald-600 hover:underline">Restore</button>
                                             </form>
+                                            @include('admin.products.partials.delete-button')
                                         @endcan
                                     @else
                                         <a href="{{ route('shop.show', $product) }}" target="_blank" class="text-xs text-slate-500 hover:underline">View</a>
                                         @can('inventory.view')
                                             <a href="{{ route('admin.stock.index', ['product' => $product->id]) }}" class="text-xs text-slate-500 hover:underline">History</a>
                                         @endcan
-                                        <a href="{{ route('admin.barcodes.index', ['product' => $product->id]) }}" class="text-xs text-slate-500 hover:underline">Labels</a>
+                                        <a href="{{ route('admin.barcodes.index', ['product' => $product->id]) }}" class="text-xs text-slate-500 hover:underline">Barcode</a>
                                         @can('products.edit')
                                             <a href="{{ route('admin.products.edit', $product) }}" class="text-xs font-semibold text-brand-600 hover:underline">Edit</a>
                                         @endcan
                                         @can('products.delete')
-                                            <form method="POST" action="{{ route('admin.products.destroy', $product) }}"
-                                                  onsubmit="return confirm('Archive this product? It will be hidden from the shop but kept for order and stock history.')">
-                                                @csrf @method('DELETE')
-                                                <button class="text-xs text-rose-600 hover:underline">Archive</button>
-                                            </form>
+                                            @include('admin.products.partials.delete-button')
                                         @endcan
                                     @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-4 py-10 text-center text-slate-500">No products match these filters.</td></tr>
+                        <tr><td colspan="9" class="px-4 py-10 text-center text-slate-500">No products match these filters.</td></tr>
                     @endforelse
                 </tbody>
             </table>

@@ -55,7 +55,7 @@ class SupplierTest extends TestCase
             ->assertSee('Rahman & Sons Textiles')->assertSee(Money::format(4500))->assertDontSee('Pay supplier');
 
         $profile = route('admin.suppliers.show', $supplier);
-        $this->actingAs($warehouse)->delete(route('admin.suppliers.destroy', $supplier))->assertSessionHas('success');
+        $this->actingAs($warehouse)->patch(route('admin.suppliers.archive', $supplier))->assertSessionHas('success');
         $this->assertSoftDeleted($supplier);
         $this->actingAs($warehouse)->get(route('admin.suppliers.index'))->assertDontSee($profile);
         $this->actingAs($warehouse)->get(route('admin.suppliers.index', ['status' => 'archived']))->assertSee($profile);

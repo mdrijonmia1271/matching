@@ -256,14 +256,16 @@ class ShopFlowTest extends TestCase
         $this->actingAs($admin)->post(route('admin.products.store'), [
             'category_id' => $category->id,
             'name' => 'Laravel in Action',
+            'short_description' => 'Short text', 'description' => 'Full text', 'cost_price' => 500,
             'price' => 1200,
-            'variants' => [['opening_stock' => 7]],
+            'variants' => [['id' => null]],
             'is_active' => 1,
         ])->assertRedirect(route('admin.products.index'));
 
         $product = Product::firstOrFail();
         $this->assertNotEmpty($product->slug);
         $this->assertNotEmpty($product->sku);
+        $this->assertNotEmpty($product->variants()->value('barcode'));
 
         $order = Order::create([
             'customer_name' => 'Walk-in',
@@ -291,6 +293,7 @@ class ShopFlowTest extends TestCase
         ])->assertSessionHas('success');
 
         $this->assertSame('cancelled', $order->fresh()->status);
-        $this->assertSame(9, $product->fresh()->stock);
+        // The form adds no stock, so the only stock is the 2 the cancellation gave back.
+        $this->assertSame(2, $product->fresh()->stock);
     }
 }

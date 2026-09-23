@@ -5,13 +5,13 @@
 
 @section('content')
     @php
-        $blank = ['id' => null, 'color' => '', 'size' => '', 'sku' => '', 'barcode' => '', 'cost_price' => '', 'price' => '', 'sale_price' => '', 'opening_stock' => '', 'low_stock_threshold' => '', 'is_active' => true];
+        $blank = ['id' => null, 'color' => '', 'size' => '', 'cost_price' => '', 'price' => '', 'sale_price' => '', 'low_stock_threshold' => '', 'is_active' => true];
         $existing = $product->variants->keyBy('id');
 
         // After a validation error, rebuild the rows exactly as they were submitted.
         $source = old('variants', $product->variants->map(fn ($variant) => [
-            'id' => $variant->id, 'color' => $variant->color, 'size' => $variant->size, 'sku' => $variant->sku,
-            'barcode' => $variant->barcode, 'cost_price' => $variant->cost_price, 'price' => $variant->price,
+            'id' => $variant->id, 'color' => $variant->color, 'size' => $variant->size,
+            'cost_price' => $variant->cost_price, 'price' => $variant->price,
             'sale_price' => $variant->sale_price, 'low_stock_threshold' => $variant->low_stock_threshold,
             'is_active' => $variant->is_active,
         ])->all());
@@ -38,8 +38,6 @@
             'subcategory' => (string) old('subcategory_id', $product->subcategory_id),
             'tree' => $categories->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'children' => $c->children->map->only(['id', 'name'])->values()])->values(),
             'rows' => $rows->all(),
-            'stockUrl' => route('admin.stock.create', ['variant' => '__ID__']),
-            'canAdjust' => auth()->user()->can('inventory.adjust'),
         ];
 
         $defaultThreshold = \App\Support\Settings::get('low_stock_threshold');
@@ -56,11 +54,8 @@
                     const match = this.tree.find(category => String(category.id) === String(this.category));
                     return match ? match.children : [];
                 },
-                stockLink(id) {
-                    return this.stockUrl.replace('__ID__', id);
-                },
                 blankRow(color = '', size = '') {
-                    return { key: 'new' + (this.counter++), id: null, color, size, sku: '', barcode: '', cost_price: '', price: '', sale_price: '', opening_stock: '', low_stock_threshold: '', is_active: true, stock: null };
+                    return { key: 'new' + (this.counter++), id: null, color, size, cost_price: '', price: '', sale_price: '', low_stock_threshold: '', is_active: true, stock: null };
                 },
                 generate() {
                     const split = value => value.split(',').map(part => part.trim()).filter(Boolean);
@@ -269,37 +264,21 @@
             <section class="card p-6">
                 <h2 class="text-base font-bold text-slate-900">Basics</h2>
 
-                <div class="mt-5 grid gap-4 sm:grid-cols-2">
-                    <div class="sm:col-span-2">
+                <div class="mt-5 grid gap-4">
+                    <div>
                         <label for="name" class="label">Product name</label>
                         <input id="name" name="name" type="text" required maxlength="180" value="{{ old('name', $product->name) }}" class="input">
                     </div>
 
                     <div>
-                        <label for="slug" class="label">Slug <span class="text-slate-400">(auto if blank)</span></label>
-                        <input id="slug" name="slug" type="text" maxlength="200" value="{{ old('slug', $product->slug) }}" class="input">
-                    </div>
-
-                    <div>
-                        <label for="sku" class="label">Product SKU <span class="text-slate-400">(auto if blank)</span></label>
-                        <input id="sku" name="sku" type="text" maxlength="80" value="{{ old('sku', $product->sku) }}" class="input font-mono">
-                        <p class="mt-1 text-xs text-slate-500" x-show="hasVariants">Parent code. Each variant has its own SKU below.</p>
-                    </div>
-
-                    <div class="sm:col-span-2">
                         <label for="short_description" class="label">Short description</label>
-                        <input id="short_description" name="short_description" type="text" maxlength="300"
+                        <input id="short_description" name="short_description" type="text" required maxlength="300"
                                value="{{ old('short_description', $product->short_description) }}" class="input">
                     </div>
 
-                    <div class="sm:col-span-2">
+                    <div>
                         <label for="description" class="label">Full description</label>
-                        <textarea id="description" name="description" rows="6" class="input">{{ old('description', $product->description) }}</textarea>
-                    </div>
-
-                    <div class="sm:col-span-2">
-                        <label for="tags" class="label">Tags <span class="text-slate-400">(comma separated)</span></label>
-                        <input id="tags" name="tags" type="text" maxlength="500" value="{{ old('tags', implode(', ', $product->tags ?? [])) }}" class="input" placeholder="eid, cotton, party wear">
+                        <textarea id="description" name="description" rows="6" required class="input">{{ old('description', $product->description) }}</textarea>
                     </div>
                 </div>
             </section>
@@ -307,8 +286,8 @@
             <section class="card p-6">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <h2 class="text-base font-bold text-slate-900">Variants, stock &amp; barcodes</h2>
-                        <p class="mt-1 text-sm text-slate-500">Stock is tracked per variant. Existing stock changes only from the Stock screen, so every change is recorded.</p>
+                        <h2 class="text-base font-bold text-slate-900">Variants &amp; prices</h2>
+                        <p class="mt-1 text-sm text-slate-500">SKU and barcode are generated automatically. Stock is added from the Stock screen, so every change is recorded.</p>
                     </div>
                     <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
                         <input type="hidden" name="has_variants" :value="hasVariants ? 1 : 0">
@@ -325,27 +304,6 @@
                         </p>
                         <div class="grid gap-4 sm:grid-cols-3">
                             <input type="hidden" name="variants[0][id]" :value="rows[0].id ?? ''">
-                            <div>
-                                <label class="label" for="single_barcode">Barcode</label>
-                                <input id="single_barcode" type="text" name="variants[0][barcode]" x-model="rows[0].barcode" maxlength="64" class="input font-mono" placeholder="Scan, type or leave blank">
-                            </div>
-                            <div>
-                                <template x-if="! rows[0].id">
-                                    <div>
-                                        <label class="label" for="single_opening">Opening stock</label>
-                                        <input id="single_opening" type="number" min="0" name="variants[0][opening_stock]" x-model="rows[0].opening_stock" class="input" placeholder="0">
-                                    </div>
-                                </template>
-                                <template x-if="rows[0].id">
-                                    <div>
-                                        <p class="label">In stock</p>
-                                        <p class="flex items-center gap-3 py-2.5 text-sm">
-                                            <span class="font-bold text-slate-900" x-text="rows[0].stock"></span>
-                                            <a x-show="canAdjust" :href="stockLink(rows[0].id)" class="text-brand-600 hover:underline">Adjust stock</a>
-                                        </p>
-                                    </div>
-                                </template>
-                            </div>
                             <div>
                                 <label class="label" for="single_threshold">Low stock alert at</label>
                                 <input id="single_threshold" type="number" min="0" name="variants[0][low_stock_threshold]" x-model="rows[0].low_stock_threshold" class="input" placeholder="Default ({{ $defaultThreshold }})">
@@ -372,17 +330,14 @@
                         </div>
 
                         <div class="mt-4 overflow-x-auto">
-                            <table class="w-full min-w-[1000px] text-sm">
+                            <table class="w-full min-w-[760px] text-sm">
                                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                                     <tr>
                                         <th class="px-2 py-2">Colour</th>
                                         <th class="px-2 py-2">Size</th>
-                                        <th class="px-2 py-2">SKU</th>
-                                        <th class="px-2 py-2">Barcode</th>
-                                        <th class="px-2 py-2">Purchase</th>
-                                        <th class="px-2 py-2">Selling</th>
-                                        <th class="px-2 py-2">Sale</th>
-                                        <th class="px-2 py-2">Stock</th>
+                                        <th class="px-2 py-2">Purchase price</th>
+                                        <th class="px-2 py-2">Selling price</th>
+                                        <th class="px-2 py-2">Discounted price</th>
                                         <th class="px-2 py-2">Alert at</th>
                                         <th class="px-2 py-2 text-center">Active</th>
                                         <th class="px-2 py-2"></th>
@@ -399,27 +354,13 @@
                                                 <input type="text" :name="`variants[${index}][size]`" x-model="row.size" maxlength="40" class="input w-20 px-2 py-1.5" aria-label="Size">
                                             </td>
                                             <td class="px-2 py-2">
-                                                <input type="text" :name="`variants[${index}][sku]`" x-model="row.sku" maxlength="80" class="input px-2 py-1.5 font-mono text-xs" placeholder="Auto" aria-label="SKU">
-                                            </td>
-                                            <td class="px-2 py-2">
-                                                <input type="text" :name="`variants[${index}][barcode]`" x-model="row.barcode" maxlength="64" class="input px-2 py-1.5 font-mono text-xs" placeholder="Scan or blank" aria-label="Barcode">
-                                            </td>
-                                            <td class="px-2 py-2">
                                                 <input type="number" step="0.01" min="0" :name="`variants[${index}][cost_price]`" x-model="row.cost_price" class="input w-24 px-2 py-1.5" placeholder="Default" aria-label="Purchase price">
                                             </td>
                                             <td class="px-2 py-2">
                                                 <input type="number" step="0.01" min="0" :name="`variants[${index}][price]`" x-model="row.price" class="input w-24 px-2 py-1.5" placeholder="Default" aria-label="Selling price">
                                             </td>
                                             <td class="px-2 py-2">
-                                                <input type="number" step="0.01" min="0" :name="`variants[${index}][sale_price]`" x-model="row.sale_price" class="input w-24 px-2 py-1.5" placeholder="—" aria-label="Sale price">
-                                            </td>
-                                            <td class="px-2 py-2">
-                                                <template x-if="! row.id">
-                                                    <input type="number" min="0" :name="`variants[${index}][opening_stock]`" x-model="row.opening_stock" class="input w-20 px-2 py-1.5" placeholder="0" aria-label="Opening stock">
-                                                </template>
-                                                <template x-if="row.id">
-                                                    <a :href="canAdjust ? stockLink(row.id) : null" class="inline-block py-1.5 font-semibold text-slate-900 hover:text-brand-600" x-text="row.stock" title="Adjust stock"></a>
-                                                </template>
+                                                <input type="number" step="0.01" min="0" :name="`variants[${index}][sale_price]`" x-model="row.sale_price" class="input w-24 px-2 py-1.5" placeholder="—" aria-label="Discounted price">
                                             </td>
                                             <td class="px-2 py-2">
                                                 <input type="number" min="0" :name="`variants[${index}][low_stock_threshold]`" x-model="row.low_stock_threshold" class="input w-20 px-2 py-1.5" placeholder="{{ $defaultThreshold }}" aria-label="Low stock alert">
@@ -441,20 +382,16 @@
 
                         <div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
                             <button type="button" @click="addRow()" class="text-sm font-medium text-brand-600 hover:underline">+ Add a variant</button>
-                            <span>Blank SKUs are generated (e.g. KRT-BLK-M-001). Blank prices use the product prices.</span>
+                            <span>Blank prices use the product prices.</span>
                         </div>
                     </div>
                 </template>
 
-                <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
-                    <label class="flex items-center gap-2 text-sm text-slate-700">
-                        <input type="checkbox" name="generate_barcodes" value="1" @checked(old('generate_barcodes')) class="rounded text-brand-600 focus:ring-brand-500">
-                        Generate a barcode for every variant that does not have one
-                    </label>
-                    @if($product->exists)
+                @if($product->exists)
+                    <div class="mt-5 flex justify-end">
                         <a href="{{ route('admin.barcodes.index', ['product' => $product->id]) }}" class="text-sm font-medium text-brand-600 hover:underline">Print barcode labels</a>
-                    @endif
-                </div>
+                    </div>
+                @endif
             </section>
 
             @php
@@ -593,7 +530,7 @@
                 <div class="mt-5 space-y-4">
                     <div>
                         <label for="cost_price" class="label">Purchase price <span class="text-slate-400">(cost)</span></label>
-                        <input id="cost_price" name="cost_price" type="number" step="0.01" min="0"
+                        <input id="cost_price" name="cost_price" type="number" step="0.01" min="0" required
                                value="{{ old('cost_price', $product->cost_price) }}" class="input">
                         <p class="mt-1 text-xs text-slate-500">Used for stock value and profit. Never shown to customers.</p>
                     </div>

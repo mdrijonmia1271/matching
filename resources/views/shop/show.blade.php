@@ -85,7 +85,6 @@
                         color: @js($colors->count() === 1 ? $colors->first() : null),
                         size: @js($sizes->count() === 1 ? $sizes->first() : null),
                         qty: 1,
-                        symbol: @js(\App\Support\Money::symbol()),
                         get variant() {
                             if (! this.hasVariants) return this.variants[0] ?? null;
                             return this.variants.find(v => (v.color ?? null) === (this.color ?? null) && (v.size ?? null) === (this.size ?? null)) ?? null;
@@ -95,7 +94,7 @@
                                 && (field === 'color' ? (! this.size || v.size === this.size) : (! this.color || v.color === this.color)));
                         },
                         money(amount) {
-                            return this.symbol + ' ' + Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            return ({!! \App\Support\Money::jsFormatter() !!})(amount);
                         },
                         {{-- Percent off for the selected variant. No double quotes or --}}
                         {{-- angle brackets in here: this lives inside an HTML attribute. --}}

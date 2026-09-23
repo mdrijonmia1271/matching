@@ -18,6 +18,7 @@ class AccountTransaction extends Model
         'customer_payment' => 'Customer due payment',
         'refund' => 'Refund',
         'supplier_payment' => 'Supplier payment',
+        'purchase_payment' => 'Purchase paid (no supplier)',
         'expense' => 'Expense',
         'deposit' => 'Money in',
         'withdrawal' => 'Money out',

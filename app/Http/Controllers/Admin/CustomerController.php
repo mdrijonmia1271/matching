@@ -34,7 +34,7 @@ class CustomerController extends Controller implements HasMiddleware
         return [
             new Middleware('can:customers.view', only: ['index', 'show']),
             new Middleware('can:customers.create', only: ['create', 'store']),
-            new Middleware('can:customers.edit', only: ['edit', 'update', 'destroy', 'restore']),
+            new Middleware('can:customers.edit', only: ['edit', 'update', 'destroy', 'archive', 'restore']),
         ];
     }
 
@@ -149,8 +149,31 @@ class CustomerController extends Controller implements HasMiddleware
         return redirect()->route('admin.customers.show', $customer)->with('success', $new ? 'Customer updated.' : 'Nothing changed.');
     }
 
-    /** Customers are archived, never deleted: their orders and payments keep pointing at them. */
+    /**
+     * Deletes the customer for good. Refused while any order, payment or return
+     * points at them, because those records would lose who they belong to.
+     */
     public function destroy(Customer $customer)
+    {
+        $blockers = array_filter([
+            $customer->orders()->exists() ? 'orders' : null,
+            $customer->customerPayments()->exists() ? 'payments' : null,
+            OrderReturn::where('customer_id', $customer->id)->exists() ? 'returns' : null,
+        ]);
+
+        if ($blockers) {
+            return back()->with('error', $customer->name . ' cannot be deleted: they have ' . implode(', ', $blockers) . ' on record.');
+        }
+
+        $customer->forceDelete();
+
+        AuditLogger::log('customers', 'deleted', null, 'Customer ' . $customer->name . ($customer->phone ? ' (' . $customer->phone . ')' : '') . ' deleted permanently');
+
+        return redirect()->route('admin.customers.index')->with('success', $customer->name . ' deleted permanently.');
+    }
+
+    /** Hides a customer who has history and so cannot be deleted; their orders and payments are kept. */
+    public function archive(Customer $customer)
     {
         $customer->delete();
 

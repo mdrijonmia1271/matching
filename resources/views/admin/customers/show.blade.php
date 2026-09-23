@@ -30,9 +30,9 @@
                     </form>
                 @else
                     <a href="{{ route('admin.customers.edit', $customer) }}" class="btn-secondary">Edit</a>
-                    <form method="POST" action="{{ route('admin.customers.destroy', $customer) }}" x-data
+                    <form method="POST" action="{{ route('admin.customers.archive', $customer) }}" x-data
                           @submit="if (! confirm(@js('Archive ' . $customer->name . '? Their orders and payments are kept.'))) $event.preventDefault()">
-                        @csrf @method('DELETE')
+                        @csrf @method('PATCH')
                         <button type="submit" class="btn-secondary text-rose-600">Archive</button>
                     </form>
                 @endif
@@ -301,9 +301,8 @@
                           method: @js(old('method', array_key_first($methods))),
                           account: @js((string) old('account_id', $methodAccounts[old('method', array_key_first($methods))] ?? '')),
                           defaults: @js($methodAccounts),
-                          symbol: @js(\App\Support\Money::symbol()),
                           money(value) {
-                              return this.symbol + ' ' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                              return ({!! \App\Support\Money::jsFormatter() !!})(value);
                           },
                           get plan() {
                               let left = Math.round((Number(this.amount) || 0) * 100);

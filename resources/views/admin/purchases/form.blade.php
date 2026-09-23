@@ -37,7 +37,12 @@
                   if (existing) {
                       existing.quantity = Number(existing.quantity) + 1;
                   } else {
-                      this.lines.push({ ...result, quantity: 1, unit_cost: result.cost ?? 0 });
+                      // Start from the saved purchase price, else what was last paid; staff can still change it.
+                      const start = result.cost ?? result.last_cost;
+                      const hint = result.cost !== null && result.cost !== undefined
+                          ? 'Purchase price: ' + this.money(result.cost)
+                          : (result.last_cost !== null && result.last_cost !== undefined ? 'Last paid: ' + this.money(result.last_cost) : 'No purchase price saved');
+                      this.lines.push({ ...result, quantity: 1, unit_cost: start ?? '', cost_hint: hint });
                   }
                   this.results = []; this.query = ''; this.message = '';
               },
@@ -46,7 +51,7 @@
               get subtotal() { return this.lines.reduce((sum, line) => sum + this.lineTotal(line), 0); },
               get total() { return this.subtotal - (Number(this.discount) || 0) + (Number(this.additional) || 0); },
               get units() { return this.lines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0); },
-              money(value) { return @js(\App\Support\Money::symbol()) + ' ' + (Number(value) || 0).toFixed(2); },
+              money(value) { return ({!! \App\Support\Money::jsFormatter() !!})(value); },
           }">
         @csrf
         @if($editing) @method('PUT') @endif
@@ -105,6 +110,8 @@
                                         <td class="px-3 py-2">
                                             <input type="number" min="0" max="10000000" step="0.01" required class="input"
                                                    :name="'items[' + index + '][unit_cost]'" x-model="line.unit_cost">
+                                            <span x-show="line.cost_hint" x-cloak class="mt-1 block text-xs"
+                                                  :class="line.unit_cost === '' ? 'text-amber-600' : 'text-slate-400'" x-text="line.cost_hint"></span>
                                         </td>
                                         <td class="px-3 py-2 text-right font-semibold text-slate-900" x-text="money(lineTotal(line))"></td>
                                         <td class="px-3 py-2 text-right">
@@ -153,9 +160,9 @@
             <aside class="space-y-6">
                 <section class="card space-y-4 p-6">
                     <div>
-                        <label for="supplier_id" class="label">Supplier</label>
-                        <select id="supplier_id" name="supplier_id" required class="input">
-                            <option value="">Choose a supplier</option>
+                        <label for="supplier_id" class="label">Supplier <span class="text-slate-400">(optional)</span></label>
+                        <select id="supplier_id" name="supplier_id" class="input">
+                            <option value="">No supplier</option>
                             @foreach($suppliers as $supplier)
                                 <option value="{{ $supplier->id }}" @selected((int) old('supplier_id', $purchase->supplier_id) === $supplier->id)>
                                     {{ $supplier->name }}{{ $supplier->company ? ' — ' . $supplier->company : '' }}
@@ -163,9 +170,6 @@
                             @endforeach
                         </select>
                         @error('supplier_id') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
-                        <p class="mt-1 text-xs text-slate-400">
-                            Missing? <a href="{{ route('admin.suppliers.create') }}" class="text-brand-600 hover:underline">Add a supplier</a>.
-                        </p>
                     </div>
 
                     <div>

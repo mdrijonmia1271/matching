@@ -70,6 +70,7 @@
                         <th class="px-4 py-3 text-right">Paid</th>
                         <th class="px-4 py-3 text-right">Balance</th>
                         <th class="px-4 py-3">Last payment</th>
+                        <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -85,9 +86,21 @@
                             <td class="px-4 py-3 text-right text-emerald-700">@money($supplier->total_paid)</td>
                             <td class="px-4 py-3 text-right font-semibold {{ (float) $supplier->current_balance > 0 ? 'text-rose-600' : 'text-slate-400' }}">@money($supplier->current_balance)</td>
                             <td class="px-4 py-3 text-xs text-slate-500">{{ $supplier->last_payment_at?->format('d M Y') ?? 'Never' }}</td>
+                            <td class="px-4 py-3">
+                                @can('purchases.edit')
+                                    <div class="flex items-center justify-end gap-3">
+                                        <a href="{{ route('admin.suppliers.edit', $supplier) }}" class="text-xs font-semibold text-brand-600 hover:underline">Edit</a>
+                                        <form method="POST" action="{{ route('admin.suppliers.destroy', $supplier) }}"
+                                              onsubmit="return confirm(@js('Delete ' . $supplier->name . ' permanently? This cannot be undone.'))">
+                                            @csrf @method('DELETE')
+                                            <button class="text-xs text-rose-600 hover:underline">Delete</button>
+                                        </form>
+                                    </div>
+                                @endcan
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-4 py-10 text-center text-slate-500">No suppliers match these filters.</td></tr>
+                        <tr><td colspan="8" class="px-4 py-10 text-center text-slate-500">No suppliers match these filters.</td></tr>
                     @endforelse
                 </tbody>
             </table>

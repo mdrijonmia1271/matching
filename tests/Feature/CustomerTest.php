@@ -220,7 +220,7 @@ class CustomerTest extends TestCase
         $this->assertDatabaseHas('customers', ['id' => $farhana->id, 'name' => 'Farhana Akter', 'opening_due' => 1000]);
         $this->assertDatabaseHas('activity_logs', ['module' => 'customers', 'action' => 'updated', 'subject_id' => $farhana->id]);
 
-        $this->actingAs($sales)->delete(route('admin.customers.destroy', $farhana))->assertSessionHas('success');
+        $this->actingAs($sales)->patch(route('admin.customers.archive', $farhana))->assertSessionHas('success');
         $this->assertSoftDeleted($farhana);
         $profile = route('admin.customers.show', $farhana);
         $this->actingAs($sales)->get(route('admin.customers.index'))->assertDontSee($profile);

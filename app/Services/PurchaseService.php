@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Account;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
@@ -25,6 +26,7 @@ class PurchaseService
     public function __construct(
         protected StockService $stock,
         protected SupplierService $suppliers,
+        protected AccountService $accounts,
     ) {}
 
     /**
@@ -44,7 +46,9 @@ class PurchaseService
                 }
             }
 
-            $supplier = Supplier::findOrFail($data['supplier_id']);
+            // No supplier is allowed: goods bought for cash, where nobody is owed anything.
+            $supplier = filled($data['supplier_id'] ?? null) ? Supplier::findOrFail($data['supplier_id']) : null;
+            $supplierName = $supplier?->name ?? 'no supplier';
             $items = $this->priceItems($data['items'] ?? []);
             $subtotal = round(array_sum(array_column($items, 'line_total')), 2);
             $discount = round((float) ($data['discount'] ?? 0), 2);
@@ -55,7 +59,7 @@ class PurchaseService
             }
 
             $attributes = [
-                'supplier_id' => $supplier->id,
+                'supplier_id' => $supplier?->id,
                 'status' => in_array($data['status'] ?? 'draft', Purchase::OPEN_STATUSES, true) ? $data['status'] : 'draft',
                 'purchase_date' => $data['purchase_date'],
                 'invoice_number' => $data['invoice_number'] ?? null,
@@ -81,9 +85,9 @@ class PurchaseService
             }
 
             AuditLogger::log('purchases', $creating ? 'purchase_created' : 'purchase_updated', $purchase,
-                sprintf('Purchase %s for %s — %s', $purchase->number, $supplier->name, Money::format($purchase->total)),
+                sprintf('Purchase %s for %s — %s', $purchase->number, $supplierName, Money::format($purchase->total)),
                 new: [
-                    'supplier' => $supplier->name,
+                    'supplier' => $supplierName,
                     'status' => $purchase->status,
                     'items' => count($items),
                     'total' => (float) $purchase->total,
@@ -135,22 +139,28 @@ class PurchaseService
                 'received_at' => now(),
             ]);
 
+            $supplier = $locked->supplier;
+
             AuditLogger::log('purchases', 'purchase_received', $locked,
-                sprintf('Purchase %s received: %d units, %s added to what %s is owed',
-                    $locked->number, $locked->items->sum('quantity'), Money::format($locked->total), $locked->supplier->name),
+                $supplier
+                    ? sprintf('Purchase %s received: %d units, %s added to what %s is owed',
+                        $locked->number, $locked->items->sum('quantity'), Money::format($locked->total), $supplier->name)
+                    : sprintf('Purchase %s received without a supplier: %d units, %s',
+                        $locked->number, $locked->items->sum('quantity'), Money::format($locked->total)),
                 new: [
-                    'supplier' => $locked->supplier->name,
+                    'supplier' => $supplier?->name,
                     'quantity' => (int) $locked->items->sum('quantity'),
                     'total' => (float) $locked->total,
                 ]);
 
             if ($payNow !== null && round($payNow, 2) > 0) {
                 if (! $account) {
-                    throw new RuntimeException('Choose the account the supplier is paid from.');
+                    throw new RuntimeException($supplier ? 'Choose the account the supplier is paid from.' : 'Choose the account the purchase is paid from.');
                 }
 
-                $this->suppliers->pay($locked->supplier, $payNow, $account, $method ?: 'cash',
-                    'Payment for purchase ' . $locked->number);
+                $supplier
+                    ? $this->suppliers->pay($supplier, $payNow, $account, $method ?: 'cash', 'Payment for purchase ' . $locked->number)
+                    : $this->payWithoutSupplier($locked, round($payNow, 2), $account);
             }
 
             return $locked;
@@ -198,6 +208,31 @@ class PurchaseService
     }
 
     /**
+     * Money paid for a purchase with no supplier leaves the account straight
+     * away: there is no supplier balance to pay into or settle later.
+     */
+    protected function payWithoutSupplier(Purchase $purchase, float $amount, Account $account): void
+    {
+        $source = Account::lockForUpdate()->findOrFail($account->id);
+
+        if (! $source->is_active) {
+            throw new RuntimeException($source->name . ' is inactive. Choose another account.');
+        }
+
+        if ($amount > (float) $purchase->total) {
+            throw new RuntimeException('The payment (' . Money::format($amount) . ') is more than the ' . Money::format((float) $purchase->total) . ' purchase.');
+        }
+
+        $available = $source->balance();
+
+        if ($amount > $available) {
+            throw new RuntimeException('Only ' . Money::format($available) . ' is available in ' . $source->name . '.');
+        }
+
+        $this->accounts->post($source, 'out', $amount, 'purchase_payment', $purchase, 'Payment for purchase ' . $purchase->number);
+    }
+
+    /**
      * Weighted average cost: what is already on the shelf keeps its cost, the
      * new units bring theirs. Stock at or below zero has no cost to average.
      */
@@ -211,6 +246,14 @@ class PurchaseService
 
         ProductVariant::withTrashed()->whereKey($variant->id)->update(['cost_price' => $average]);
         $variant->setAttribute('cost_price', $average)->syncOriginalAttribute('cost_price');
+
+        // A product without options keeps its price on the product (the form clears the
+        // variant's copy on save), so the new cost must land there too or the next edit loses it.
+        $product = $variant->product()->first();
+
+        if ($product && ! $product->has_variants) {
+            Product::withTrashed()->whereKey($product->id)->update(['cost_price' => $average]);
+        }
     }
 
     /**

@@ -87,7 +87,7 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-slate-700">
-                                {{ $purchase->supplier?->name }}
+                                {{ $purchase->supplier?->name ?? 'No supplier' }}
                                 <span class="block text-xs text-slate-400">{{ $purchase->supplier?->company ?: '—' }}</span>
                             </td>
                             <td class="px-4 py-3 text-xs text-slate-500">{{ $purchase->purchase_date?->format('d M Y') }}</td>

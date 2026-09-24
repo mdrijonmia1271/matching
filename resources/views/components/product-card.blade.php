@@ -57,12 +57,12 @@
             <a href="{{ route('shop.show', $product) }}" class="df-btn df-btn--olive df-btn--sm is-muted">Unavailable</a>
         @elseif($product->has_variants)
             {{-- Size and colour have to be chosen on the product page. --}}
-            <a href="{{ route('shop.show', $product) }}" class="df-btn df-btn--olive df-btn--sm">Shop now</a>
+            <a href="{{ route('shop.show', $product) }}" class="df-btn df-btn--olive df-btn--sm df-btn--shine">Shop now</a>
         @else
             <form method="POST" action="{{ route('cart.store', $product) }}">
                 @csrf
                 <input type="hidden" name="quantity" value="1">
-                <button type="submit" class="df-btn df-btn--olive df-btn--sm">Add to Cart</button>
+                <button type="submit" class="df-btn df-btn--olive df-btn--sm df-btn--shine">Add to Cart</button>
             </form>
         @endif
 

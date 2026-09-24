@@ -50,7 +50,7 @@
             <div>
                 @if($product->category)
                     <a href="{{ route('shop.index', ['category' => $product->category->slug]) }}"
-                       class="text-xs font-semibold uppercase tracking-wide text-brand-600">{{ $product->category->name }}</a>
+                       class="text-xs font-semibold uppercase tracking-wide text-[#191917]">{{ $product->category->name }}</a>
                 @endif
 
                 <h1 class="mt-2 text-3xl font-bold text-slate-900">{{ $product->name }}</h1>
@@ -125,7 +125,7 @@
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     @foreach($colors as $colorOption)
                                         <button type="button" @click="color = @js($colorOption)"
-                                                :class="color === @js($colorOption) ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-slate-300 text-slate-700 hover:border-slate-400'"
+                                                :class="color === @js($colorOption) ? 'border-[#191917] bg-[#191917] text-white' : 'border-slate-300 text-slate-700 hover:border-slate-400'"
                                                 :style="available('color', @js($colorOption)) ? '' : 'opacity:.45;text-decoration:line-through'"
                                                 class="rounded-lg border px-3 py-1.5 text-sm">{{ $colorOption }}</button>
                                     @endforeach
@@ -139,7 +139,7 @@
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     @foreach($sizes as $sizeOption)
                                         <button type="button" @click="size = @js($sizeOption)"
-                                                :class="size === @js($sizeOption) ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-slate-300 text-slate-700 hover:border-slate-400'"
+                                                :class="size === @js($sizeOption) ? 'border-[#191917] bg-[#191917] text-white' : 'border-slate-300 text-slate-700 hover:border-slate-400'"
                                                 :style="available('size', @js($sizeOption)) ? '' : 'opacity:.45;text-decoration:line-through'"
                                                 class="min-w-11 rounded-lg border px-3 py-1.5 text-sm">{{ $sizeOption }}</button>
                                     @endforeach
@@ -170,7 +170,7 @@
                             <button type="button" @click="qty = Math.min(variant ? Math.max(1, variant.stock) : 1, qty + 1)" class="px-3 py-2.5 text-slate-500 hover:text-slate-900">+</button>
                         </div>
 
-                        <button type="submit" class="btn-primary flex-1 sm:flex-none sm:px-8" :disabled="! variant || variant.stock <= 0"
+                        <button type="submit" class="btn-primary flex-1 bg-[#191917]! shadow-none! hover:bg-black! focus-visible:ring-[#191917]! sm:flex-none sm:px-8" :disabled="! variant || variant.stock <= 0"
                                 x-text="! variant ? 'Choose options' : (variant.stock > 0 ? 'Add to cart' : 'Out of stock')">
                             Add to cart
                         </button>
@@ -228,7 +228,7 @@
 
                     <textarea name="comment" rows="3" class="input mt-3" placeholder="What did you think of this product?">{{ old('comment', $myReview->comment ?? '') }}</textarea>
 
-                    <button type="submit" class="btn-primary mt-3">{{ $myReview ? 'Update review' : 'Submit review' }}</button>
+                    <button type="submit" class="btn-primary mt-3 bg-[#191917]! shadow-none! hover:bg-black! focus-visible:ring-[#191917]!">{{ $myReview ? 'Update review' : 'Submit review' }}</button>
                     <p class="mt-2 text-xs text-slate-500">Only customers who ordered this product can post a review.</p>
                 </form>
             @else

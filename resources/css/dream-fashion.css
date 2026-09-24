@@ -1046,7 +1046,7 @@
 .df-insta__script {
     margin: 14px 0 0;
     font-family: 'Parisienne', cursive;
-    font-size: 22px;
+    font-size: 24px;
     color: #9a9a92;
     text-align: right;
 }
@@ -1855,5 +1855,62 @@
 
     .df-card__price {
         gap: 4px
+    }
+}
+
+/* ---------- mobile header ----------
+   Menu and search on the left, the logo dead centre, account and cart on
+   the right. The tools wrapper steps aside (display: contents) so every icon
+   becomes its own grid cell; the side columns are equal, so the logo stays
+   centred whatever the icons measure. */
+@media (max-width:767px) {
+    .df-head__row {
+        display: grid;
+        grid-template-columns: 36px 36px 1fr 36px 36px;
+        gap: 0
+    }
+
+    .df-head__tools {
+        display: contents
+    }
+
+    .df-head__tools>*,
+    .df-logo {
+        grid-row: 1;
+        align-self: center
+    }
+
+    .df-burger {
+        grid-column: 1;
+        justify-self: start
+    }
+
+    .df-head__tools>.df-tool--icon:not(.df-cart) {
+        grid-column: 2;
+        justify-self: start
+    }
+
+    .df-logo {
+        grid-column: 3;
+        justify-self: center
+    }
+
+    .df-head__tools>:first-child {
+        grid-column: 4;
+        justify-self: end
+    }
+
+    .df-cart {
+        grid-column: 5;
+        justify-self: end
+    }
+
+    .df-tool span {
+        display: none
+    }
+
+    /* Level with the MATCHING letters, which sit below the middle of the logo. */
+    .df-head__tools>* {
+        margin-top: 10px
     }
 }

@@ -255,7 +255,8 @@
 
             <div class="df-insta">
                 @foreach ($gallery as $shot)
-                    <a href="{{ route('shop.show', $shot) }}" class="df-insta__item">
+                    {{-- <a href="{{ route('shop.show', $shot) }}" class="df-insta__item"> --}}
+                    <a href="https://www.facebook.com/share/1Bzz3ZCT4X/" class="df-insta__item" target="_blank">
                         <img src="{{ $shot->image_url }}" alt="{{ $shot->name }}" loading="lazy">
                         <span class="df-insta__icon">
                             <svg viewBox="0 0 24 24" fill="currentColor">

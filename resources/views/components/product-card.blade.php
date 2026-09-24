@@ -56,8 +56,9 @@
         @if(! $product->in_stock)
             <a href="{{ route('shop.show', $product) }}" class="df-btn df-btn--olive df-btn--sm is-muted">Unavailable</a>
         @elseif($product->has_variants)
-            {{-- Size and colour have to be chosen on the product page. --}}
-            <a href="{{ route('shop.show', $product) }}" class="df-btn df-btn--olive df-btn--sm df-btn--shine">Shop now</a>
+            {{-- Size and colour have to be chosen on the product page, so this
+                 "Add to Cart" takes the visitor there instead of posting. --}}
+            <a href="{{ route('shop.show', $product) }}" class="df-btn df-btn--olive df-btn--sm df-btn--shine df-card__cta">Add to Cart</a>
         @else
             <form method="POST" action="{{ route('cart.store', $product) }}">
                 @csrf

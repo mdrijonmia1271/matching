@@ -208,25 +208,47 @@
                     including three-pieces, sarees, batik and more.
                 </p>
                 <div class="df-social">
-                    <a href="https://www.facebook.com/share/1Bzz3ZCT4X/" target="_blank" aria-label="Facebook"><svg
-                            viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M13.5 21v-7h2.4l.4-2.8h-2.8V9.4c0-.8.2-1.4 1.4-1.4h1.5V5.5c-.3 0-1.2-.1-2.2-.1-2.2 0-3.7 1.3-3.7 3.8v2H8v2.8h2.5V21h3Z" />
+                    {{-- Brand icons in their own colours. --}}
+                    <a href="https://www.facebook.com/share/1Bzz3ZCT4X/" target="_blank" rel="noopener noreferrer"
+                        aria-label="Facebook"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="11.5" fill="#fff" />
+                            <path fill="#1877F2"
+                                d="M24 12.07C24 5.41 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.5c-1.5 0-1.96.93-1.96 1.89v2.26h3.32l-.53 3.5h-2.8V24C19.62 23.1 24 18.1 24 12.07Z" />
                         </svg></a>
                     <a href="https://www.tiktok.com/@_matching_shop" target="_blank" rel="noopener noreferrer"
-                        aria-label="TikTok"><svg viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M16.6 5.8A4.3 4.3 0 0 1 15.5 3h-3.1v12.4a2.6 2.6 0 0 1-2.6 2.5 2.6 2.6 0 0 1-2.6-2.6 2.6 2.6 0 0 1 3.4-2.5V9.6a5.8 5.8 0 0 0-.8-.1 5.7 5.7 0 0 0-5.7 5.7A5.7 5.7 0 0 0 9.8 21a5.7 5.7 0 0 0 5.7-5.7V9a7.4 7.4 0 0 0 4.3 1.4V7.3a4.3 4.3 0 0 1-3.2-1.5Z" />
+                        aria-label="TikTok"><svg viewBox="0 0 24 24">
+                            <defs>
+                                <path id="df-tiktok-note"
+                                    d="M16.6 5.8A4.3 4.3 0 0 1 15.5 3h-3.1v12.4a2.6 2.6 0 0 1-2.6 2.5 2.6 2.6 0 0 1-2.6-2.6 2.6 2.6 0 0 1 3.4-2.5V9.6a5.8 5.8 0 0 0-.8-.1 5.7 5.7 0 0 0-5.7 5.7A5.7 5.7 0 0 0 9.8 21a5.7 5.7 0 0 0 5.7-5.7V9a7.4 7.4 0 0 0 4.3 1.4V7.3a4.3 4.3 0 0 1-3.2-1.5Z" />
+                            </defs>
+                            <rect width="24" height="24" rx="5.5" fill="#000" />
+                            <g transform="translate(3 3) scale(.75)">
+                                <use href="#df-tiktok-note" fill="#25F4EE" x="-.8" y="-.8" />
+                                <use href="#df-tiktok-note" fill="#FE2C55" x=".8" y=".8" />
+                                <use href="#df-tiktok-note" fill="#fff" />
+                            </g>
                         </svg></a>
-                    <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="1.7">
-                            <rect x="3.5" y="3.5" width="17" height="17" rx="4.6" />
-                            <circle cx="12" cy="12" r="3.6" />
-                            <circle cx="17.2" cy="6.9" r="1" fill="currentColor" />
+                    <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24">
+                            <defs>
+                                <radialGradient id="df-instagram" cx="30%" cy="107%" r="150%">
+                                    <stop offset="0" stop-color="#fdf497" />
+                                    <stop offset=".05" stop-color="#fdf497" />
+                                    <stop offset=".45" stop-color="#fd5949" />
+                                    <stop offset=".6" stop-color="#d6249f" />
+                                    <stop offset=".9" stop-color="#285aeb" />
+                                </radialGradient>
+                            </defs>
+                            <rect width="24" height="24" rx="6" fill="url(#df-instagram)" />
+                            <g fill="none" stroke="#fff" stroke-width="1.8">
+                                <rect x="5" y="5" width="14" height="14" rx="4" />
+                                <circle cx="12" cy="12" r="3.3" />
+                            </g>
+                            <circle cx="16.4" cy="7.6" r="1" fill="#fff" />
                         </svg></a>
-                    <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M21.6 7.2a2.6 2.6 0 0 0-1.8-1.8C18 5 12 5 12 5s-6 0-7.8.4A2.6 2.6 0 0 0 2.4 7.2C2 9 2 12 2 12s0 3 .4 4.8a2.6 2.6 0 0 0 1.8 1.8C6 19 12 19 12 19s6 0 7.8-.4a2.6 2.6 0 0 0 1.8-1.8C22 15 22 12 22 12s0-3-.4-4.8ZM10 15.2V8.8L15.5 12 10 15.2Z" />
+                    <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24">
+                            <path fill="#FF0000"
+                                d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8Z" />
+                            <path fill="#fff" d="M9.6 15.6 15.8 12 9.6 8.4Z" />
                         </svg></a>
                 </div>
             </div>

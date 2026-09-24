@@ -868,8 +868,8 @@
 }
 
 .df-stars svg {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     color: #d6d6d0
 }
 
@@ -879,7 +879,7 @@
 
 .df-card__title {
     margin: 0;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
     letter-spacing: 1px;
     text-transform: uppercase
@@ -900,7 +900,7 @@
     align-items: baseline;
     justify-content: center;
     gap: 5px;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--df-ink-soft);
 }
 
@@ -911,11 +911,12 @@
 
 .df-card__price s {
     color: #b2b2ab;
-    font-size: 13px;
+    font-size: 12px;
     text-decoration-thickness: 1px
 }
 
-.df-card__body form {
+.df-card__body form,
+.df-card__cta {
     margin-top: 4px
 }
 
@@ -1342,22 +1343,25 @@
 
 .df-social {
     display: flex;
-    gap: 12px;
-    margin-top: 14px
+    align-items: center;
+    gap: 14px;
+    margin-top: 16px
 }
 
+/* The icons keep their brand colours; hover only lifts them. */
 .df-social a {
-    color: var(--df-ink-soft);
-    transition: color .2s ease
+    display: block;
+    line-height: 0;
+    transition: transform .2s ease
 }
 
 .df-social a:hover {
-    color: var(--df-olive)
+    transform: translateY(-2px)
 }
 
 .df-social svg {
-    width: 15px;
-    height: 15px
+    width: 28px;
+    height: 28px
 }
 
 .df-foot__bar {
@@ -1800,7 +1804,7 @@
    =================================================================== */
 .df-off {
     color: #e02424;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: .2px;
     white-space: nowrap;

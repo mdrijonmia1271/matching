@@ -837,7 +837,8 @@
     left: 8px;
     z-index: 2;
     padding: 3px 7px;
-    background: var(--df-olive);
+    /* background: var(--df-olive); */
+    background: #191917;
     color: #fff;
     font-size: 9px;
     font-weight: 600;
@@ -1346,7 +1347,7 @@
 }
 
 .df-foot__bar {
-    background: var(--df-olive);
+    /* background: var(--df-olive); */
     background: #191917;
     color: #f1f1ea
 }

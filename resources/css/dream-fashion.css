@@ -116,12 +116,12 @@
 }
 
 .df-btn--olive {
-    background: var(--df-olive);
+    background: #191917;
     color: #fff
 }
 
 .df-btn--olive:hover {
-    background: var(--df-olive-dark)
+    background: #000
 }
 
 .df-btn--sm {
@@ -1347,6 +1347,7 @@
 
 .df-foot__bar {
     background: var(--df-olive);
+    background: #191917;
     color: #f1f1ea
 }
 

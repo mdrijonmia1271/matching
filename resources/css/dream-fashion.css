@@ -1465,35 +1465,47 @@
 }
 
 @media (max-width:820px) {
+    /* Small screens stack everything: copy, offer card, then the picture in
+       normal flow. The inner box is static so the dots sit on the picture. */
     .df-hero__inner {
+        position: static;
         flex-direction: column;
         align-items: flex-start;
-        gap: 28px;
-        padding: 60px 20px 200px
+        gap: 24px;
+        min-height: 0;
+        padding: 40px 20px 32px
+    }
+
+    .df-hero__title {
+        margin-top: 0
+    }
+
+    .df-hero__script {
+        margin-bottom: 20px
     }
 
     .df-offer {
+        align-self: center;
         width: 100%;
         max-width: 300px
     }
 
     .df-hero__figure {
-        width: 72%;
+        position: relative;
+        width: 100%;
         max-width: none;
-        left: 50%;
-        right: auto;
-        transform: translateX(-50%);
         top: auto;
-        height: 190px
+        height: 340px;
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18%);
+        mask-image: linear-gradient(to bottom, transparent 0, #000 18%)
     }
 
     .df-hero__img {
         object-position: 50% 18%
     }
 
-    /* Clear of the picture, which sits along the bottom on small screens. */
     .df-hero__dots {
-        bottom: 206px
+        bottom: 16px
     }
 
     .df-cats-holder {

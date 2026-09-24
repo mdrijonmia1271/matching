@@ -107,12 +107,13 @@
 
 .df-btn--olive {
     /* background: var(--df-olive); */
-    background: #191917;;
+    background: #191917;
     color: #fff
 }
 
 .df-btn--olive:hover {
-    background: var(--df-olive-dark)
+    background: var(--df-olive-dark);
+    background: #191917;
 }
 
 .df-btn--sm {
@@ -1079,7 +1080,7 @@
 }
 
 .df-logo--foot .df-logo__img {
-    height: 40px
+    height: 70px
 }
 
 .df-logo--foot .df-logo__text {
@@ -1487,7 +1488,7 @@
     }
 
     .df-logo__img {
-        height: 60px;
+        height: 70px;
         max-width: 140px
     }
 

@@ -194,9 +194,9 @@
 }
 
 .df-logo__img {
-    height: 50px;
+    height: 70px;
     width: auto;
-    max-width: 180px;
+    max-width: 250px;
     object-fit: contain;
     flex-shrink: 0;
 }
@@ -1548,8 +1548,8 @@
     }
 
     .df-logo__img {
-        height: 40px;
-        max-width: 140px
+        height: 60px;
+        max-width: 200px
     }
 
     .df-logo__text {

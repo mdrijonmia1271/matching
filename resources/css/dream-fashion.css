@@ -1422,7 +1422,26 @@
     }
 
     .df-burger {
-        display: flex
+        display: flex;
+        gap: 5px
+    }
+
+    .df-burger span {
+        width: 22px;
+        height: 2px
+    }
+
+    /* Bigger icons, resting on the same line as the bottom of the MATCHING
+       letters, which sit at about 76% of the logo's height. */
+    .df-head__tools {
+        align-self: flex-end;
+        margin-bottom: 14px;
+        gap: 18px
+    }
+
+    .df-tool svg {
+        width: 21px;
+        height: 21px
     }
 
     .df-hero__figure {
@@ -1545,6 +1564,11 @@
 
     .df-tool span {
         display: none
+    }
+
+    .df-head__tools {
+        margin-bottom: 13px;
+        gap: 12px
     }
 
     .df-logo__img {

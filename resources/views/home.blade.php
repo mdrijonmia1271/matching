@@ -125,8 +125,6 @@
                         </a>
                     @endforeach
                 </div>
-
-                <p class="df-vertical-script">Trending Collections</p>
             </div>
         </div>
     </section>

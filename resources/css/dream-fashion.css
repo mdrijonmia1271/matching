@@ -1866,7 +1866,7 @@
 @media (max-width:767px) {
     .df-head__row {
         display: grid;
-        grid-template-columns: 36px 36px 1fr 36px 36px;
+        grid-template-columns: 40px 40px minmax(0, 1fr) 40px 40px;
         gap: 0
     }
 
@@ -1909,6 +1909,24 @@
 
     .df-tool span {
         display: none
+    }
+
+    .df-tool svg {
+        width: 26px;
+        height: 26px
+    }
+
+    .df-burger span {
+        width: 27px
+    }
+
+    /* On the narrowest phones the logo gives way rather than the icons. */
+    .df-logo {
+        min-width: 0
+    }
+
+    .df-logo__img {
+        max-width: 100%
     }
 
     /* Level with the MATCHING letters, which sit below the middle of the logo. */

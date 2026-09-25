@@ -1887,7 +1887,8 @@
 
     .df-head__tools>.df-tool--icon:not(.df-cart) {
         grid-column: 2;
-        justify-self: start
+        justify-self: start;
+        margin-left: 8px
     }
 
     .df-logo {
@@ -1897,7 +1898,8 @@
 
     .df-head__tools>:first-child {
         grid-column: 4;
-        justify-self: end
+        justify-self: end;
+        margin-right: 8px
     }
 
     .df-cart {

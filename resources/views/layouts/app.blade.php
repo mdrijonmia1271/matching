@@ -72,7 +72,6 @@
                     </div>
                 </div>
 
-                <a href="{{ route('shop.index', ['sort' => 'popular']) }}" class="df-nav__link">Vlog</a>
                 <a href="{{ route('contact') }}" class="df-nav__link">Contact</a>
             </nav>
 
@@ -206,7 +205,6 @@
                         @endforeach
                     </div>
 
-                    <a href="{{ route('shop.index', ['sort' => 'popular']) }}" class="df-drawer__link">Vlog</a>
                     <a href="{{ route('contact') }}" class="df-drawer__link">Contact</a>
                 </div>
 

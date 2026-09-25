@@ -329,6 +329,12 @@
     padding: 2px
 }
 
+/* Account and cart carry a second, lighter icon for phones (see the mobile
+   header block at the end of the file). */
+.df-ico-mob {
+    display: none
+}
+
 .df-cart {
     position: relative
 }
@@ -1918,6 +1924,24 @@
 
     .df-burger span {
         width: 27px
+    }
+
+    .df-ico-desk {
+        display: none
+    }
+
+    .df-ico-mob {
+        display: block
+    }
+
+    /* A round black count tucked over the bag's top-right corner. */
+    .df-cart em {
+        top: -7px;
+        right: -8px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        font-size: 10px
     }
 
     /* On the narrowest phones the logo gives way rather than the icons. */

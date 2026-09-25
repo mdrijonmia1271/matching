@@ -81,9 +81,13 @@
                 @auth
                     <div class="df-acct" x-data="{ open: false }" @click.outside="open = false">
                         <button type="button" @click="open = !open" class="df-tool">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <svg class="df-ico-desk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <circle cx="12" cy="8" r="3.6" />
                                 <path stroke-linecap="round" d="M5 20a7 7 0 0 1 14 0" />
+                            </svg>
+                            <svg class="df-ico-mob" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+                                <circle cx="12" cy="7.5" r="4" />
+                                <path stroke-linejoin="round" d="M4 21v-1.5A5.5 5.5 0 0 1 9.5 14h5a5.5 5.5 0 0 1 5.5 5.5V21Z" />
                             </svg>
                             <span>{{ Str::limit(auth()->user()->name, 9) }}</span>
                         </button>
@@ -102,9 +106,13 @@
                     </div>
                 @else
                     <a href="{{ route('login') }}" class="df-tool">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <svg class="df-ico-desk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                             <circle cx="12" cy="8" r="3.6" />
                             <path stroke-linecap="round" d="M5 20a7 7 0 0 1 14 0" />
+                        </svg>
+                        <svg class="df-ico-mob" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+                            <circle cx="12" cy="7.5" r="4" />
+                            <path stroke-linejoin="round" d="M4 21v-1.5A5.5 5.5 0 0 1 9.5 14h5a5.5 5.5 0 0 1 5.5 5.5V21Z" />
                         </svg>
                         <span>Log in</span>
                     </a>
@@ -119,10 +127,14 @@
                 </button>
 
                 <a href="{{ route('cart.index') }}" class="df-tool df-tool--icon df-cart" aria-label="Cart">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <svg class="df-ico-desk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M6 8h12l1.2 11.4A1.6 1.6 0 0 1 17.6 21H6.4a1.6 1.6 0 0 1-1.6-1.6L6 8Z" />
                         <path stroke-linecap="round" d="M9 8V6.5a3 3 0 0 1 6 0V8" />
+                    </svg>
+                    <svg class="df-ico-mob" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+                        <path stroke-linejoin="round" d="M5 8h14v13H5Z" />
+                        <path d="M9 8V6a3 3 0 0 1 6 0v2" />
                     </svg>
                     <em>{{ $headerCartCount ?? 0 }}</em>
                 </a>

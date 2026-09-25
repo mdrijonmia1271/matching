@@ -38,7 +38,7 @@
                     <div class="mt-3 flex gap-3 overflow-x-auto pb-1">
                         @foreach($gallery as $index => $url)
                             <button @click="active = {{ $index }}"
-                                    x-bind:class="active === {{ $index }} ? 'ring-2 ring-brand-500' : 'ring-1 ring-slate-200'"
+                                    x-bind:class="active === {{ $index }} ? 'ring-2 ring-[#191917]' : 'ring-1 ring-slate-200'"
                                     class="h-20 w-20 shrink-0 overflow-hidden rounded-lg">
                                 <img src="{{ $url }}" alt="" class="h-full w-full object-cover">
                             </button>

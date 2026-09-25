@@ -1934,13 +1934,16 @@
         display: block
     }
 
-    /* A round black count tucked over the bag's top-right corner. */
+    /* A big round black count sitting over the bag's top-right corner,
+       ringed in the header colour so the bag's lines stop cleanly at it. */
     .df-cart em {
-        top: -7px;
-        right: -8px;
-        min-width: 18px;
-        height: 18px;
-        padding: 0 4px;
+        top: -3px;
+        right: -6px;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 5px;
+        border: 2px solid var(--df-head);
+        box-sizing: border-box;
         font-size: 10px
     }
 

@@ -1926,6 +1926,7 @@
     }
 
     .df-logo__img {
+        height: 50px;
         max-width: 100%
     }
 

@@ -158,21 +158,123 @@
             </form>
         </div>
 
-        {{-- Mobile menu --}}
-        <div class="df-mobile" x-show="mobileOpen" x-cloak>
-            <a href="{{ route('home') }}">Home</a>
-            <a href="{{ route('shop.index') }}">Shop</a>
-            <a href="{{ route('shop.index', ['on_sale' => 1]) }}">Offers</a>
-            <a href="{{ route('cart.index') }}">Cart</a>
-            @auth
-                <a href="{{ route('orders.index') }}">My orders</a>
-                <a href="{{ route('profile.edit') }}">Account</a>
-            @else
-                <a href="{{ route('login') }}">Log in</a>
-            @endauth
-            @foreach ($navCategories->take(8) as $category)
-                <a href="{{ route('shop.index', ['category' => $category->slug]) }}">{{ $category->name }}</a>
-            @endforeach
+        {{-- Mobile menu: a drawer from the left with the same links as the
+             desktop nav. Home and Shop open their sub-links in place; the
+             account links sit underneath. --}}
+        <div class="df-drawer" x-show="mobileOpen" x-cloak x-data="{ sub: null }"
+            x-effect="document.body.style.overflow = mobileOpen ? 'hidden' : ''"
+            @keydown.escape.window="mobileOpen = false">
+            <div class="df-drawer__shade" x-show="mobileOpen" x-transition.opacity @click="mobileOpen = false"></div>
+
+            <nav class="df-drawer__panel" x-show="mobileOpen"
+                x-transition:enter="df-drawer-in" x-transition:enter-start="df-drawer-from"
+                x-transition:leave="df-drawer-in" x-transition:leave-end="df-drawer-from"
+                aria-label="Mobile menu">
+                <div class="df-drawer__head">
+                    <span>Menu</span>
+                    <button type="button" @click="mobileOpen = false" aria-label="Close menu">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" d="M5 5l14 14M19 5 5 19" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="df-drawer__group">
+                    <button type="button" class="df-drawer__link" @click="sub = sub === 'home' ? null : 'home'"
+                        :aria-expanded="sub === 'home'">
+                        Home
+                        <svg :class="sub === 'home' && 'is-open'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7" />
+                        </svg>
+                    </button>
+                    <div class="df-drawer__sub" x-show="sub === 'home'">
+                        <a href="{{ route('home') }}">Home</a>
+                        <a href="{{ route('home') }}#best-sellers" @click="mobileOpen = false">Best sellers</a>
+                        <a href="{{ route('shop.index', ['on_sale' => 1]) }}">Offers</a>
+                    </div>
+
+                    <button type="button" class="df-drawer__link" @click="sub = sub === 'shop' ? null : 'shop'"
+                        :aria-expanded="sub === 'shop'">
+                        Shop
+                        <svg :class="sub === 'shop' && 'is-open'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7" />
+                        </svg>
+                    </button>
+                    <div class="df-drawer__sub" x-show="sub === 'shop'">
+                        <a href="{{ route('shop.index') }}">All products</a>
+                        @foreach ($navCategories->take(6) as $category)
+                            <a href="{{ route('shop.index', ['category' => $category->slug]) }}">{{ $category->name }}</a>
+                        @endforeach
+                    </div>
+
+                    <a href="{{ route('shop.index') }}" class="df-drawer__link">Faq</a>
+                    <a href="{{ route('shop.index', ['sort' => 'popular']) }}" class="df-drawer__link">Vlog</a>
+                    <a href="{{ route('contact') }}" class="df-drawer__link">Contact</a>
+                </div>
+
+                <div class="df-drawer__account">
+                    @auth
+                        @if (auth()->user()->isStaff())
+                            <a href="{{ route('admin.dashboard') }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                    <rect x="3.5" y="3.5" width="7" height="7" rx="1" /><rect x="13.5" y="3.5" width="7" height="7" rx="1" />
+                                    <rect x="3.5" y="13.5" width="7" height="7" rx="1" /><rect x="13.5" y="13.5" width="7" height="7" rx="1" />
+                                </svg>
+                                Admin panel
+                            </a>
+                        @endif
+                        <a href="{{ route('orders.index') }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                <path stroke-linejoin="round" d="M5 8h14v13H5Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" />
+                            </svg>
+                            My Orders
+                        </a>
+                        <a href="{{ route('wishlist.index') }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                <path stroke-linejoin="round" d="M12 20.5S3.5 15.3 3.5 9.2A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8c0 6.1-8.5 11.3-8.5 11.3Z" />
+                            </svg>
+                            My Wish List
+                        </a>
+                        <a href="{{ route('profile.edit') }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                <circle cx="12" cy="12" r="9" /><circle cx="12" cy="10" r="3.2" />
+                                <path d="M6.3 18.6a6.5 6.5 0 0 1 11.4 0" />
+                            </svg>
+                            Account Settings
+                        </a>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 4H6v16h8M10 12h10m-3-3 3 3-3 3" />
+                                </svg>
+                                Log Out
+                            </button>
+                        </form>
+                    @else
+                        <a href="{{ route('login') }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                <circle cx="12" cy="12" r="9" /><circle cx="12" cy="10" r="3.2" />
+                                <path d="M6.3 18.6a6.5 6.5 0 0 1 11.4 0" />
+                            </svg>
+                            Sign In
+                        </a>
+                        <a href="{{ route('register') }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                <circle cx="10" cy="8" r="3.6" /><path d="M3.5 20a6.5 6.5 0 0 1 11-4.7" />
+                                <path stroke-linecap="round" d="M18 14v6m-3-3h6" />
+                            </svg>
+                            Create an Account
+                        </a>
+                        <a href="{{ route('wishlist.index') }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                <path stroke-linejoin="round" d="M12 20.5S3.5 15.3 3.5 9.2A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8c0 6.1-8.5 11.3-8.5 11.3Z" />
+                            </svg>
+                            My Wish List
+                        </a>
+                    @endauth
+                </div>
+            </nav>
         </div>
     </header>
 

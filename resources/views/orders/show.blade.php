@@ -75,7 +75,7 @@
                         <p class="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600"><span class="font-semibold">Note:</span> {{ $order->note }}</p>
                     @endif
                     @if($order->tracking_number)
-                        <p class="mt-3 rounded-lg bg-indigo-50 p-3 text-xs text-indigo-800">
+                        <p class="mt-3 rounded-lg bg-brand-50 p-3 text-xs text-brand-700">
                             <span class="font-semibold">{{ $order->courier_name ?: 'Courier' }}</span> tracking number:
                             <span class="font-mono">{{ $order->tracking_number }}</span>
                         </p>

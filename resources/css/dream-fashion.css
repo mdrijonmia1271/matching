@@ -18,6 +18,22 @@
     --df-wrap: 1200px;
 }
 
+/* The storefront has no violet: every Tailwind brand-* colour used on the
+   shop's own pages (log in, register, cart, checkout, product page...) is
+   remapped to the theme's ink and greys. The admin panel keeps its ramp. */
+.df-body {
+    --color-brand-50: #f6f6f4;
+    --color-brand-100: #ececea;
+    --color-brand-200: #dcdcd7;
+    --color-brand-300: #b8b8b1;
+    --color-brand-400: #8a8a85;
+    --color-brand-500: #4a4a47;
+    --color-brand-600: #191917;
+    --color-brand-700: #000;
+    --color-brand-800: #000;
+    --color-brand-900: #000;
+}
+
 .df-body {
     margin: 0;
     background: #fff;

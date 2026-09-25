@@ -15,18 +15,8 @@
 @endphp
 
 @if($variant === 'admin')
-    {{-- The uploaded logo is a wide wordmark, so it gets a white chip at its
-         own proportions rather than being squeezed into a square; the name is
-         already in it, so only "Admin" follows. --}}
-    @if($src)
-        <img src="{{ $src }}" alt="{{ $name }}" class="h-10 w-auto max-w-[150px] shrink-0 rounded-md bg-white object-contain px-1.5 py-0.5">
-        <span class="truncate font-bold text-white">Admin</span>
-    @else
-        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white">
-            {{ strtoupper(substr($name, 0, 1)) }}
-        </span>
-        <span class="truncate font-bold text-white">{{ $name }} Admin</span>
-    @endif
+    {{-- The admin sidebar is labelled in words only, no logo. --}}
+    <span class="truncate text-lg font-bold text-white">Admin Panel</span>
 @else
     {{-- On the storefront the uploaded logo stands on its own: the store name
          lives in the image itself, so repeating it as text would say it twice.

@@ -1964,8 +1964,11 @@
     }
 
     /* On the narrowest phones the logo gives way rather than the icons. */
+    /* Nudged down so the bottom of the MATCHING letters meets the bottom of
+       the icons on either side. */
     .df-logo {
-        min-width: 0
+        min-width: 0;
+        margin-top: 6px
     }
 
     .df-logo__img {

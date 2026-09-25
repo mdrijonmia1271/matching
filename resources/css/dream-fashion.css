@@ -1872,7 +1872,7 @@
 @media (max-width:767px) {
     .df-head__row {
         display: grid;
-        grid-template-columns: 40px 40px minmax(0, 1fr) 40px 40px;
+        grid-template-columns: 44px 44px minmax(0, 1fr) 44px 44px;
         gap: 0
     }
 
@@ -1918,12 +1918,12 @@
     }
 
     .df-tool svg {
-        width: 26px;
-        height: 26px
+        width: 29px;
+        height: 29px
     }
 
     .df-burger span {
-        width: 27px
+        width: 30px
     }
 
     .df-ico-desk {

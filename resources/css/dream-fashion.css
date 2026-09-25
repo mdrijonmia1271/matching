@@ -1922,8 +1922,24 @@
         height: 29px
     }
 
+    /* Three thin, evenly spaced lines. */
+    .df-burger {
+        gap: 7px
+    }
+
     .df-burger span {
-        width: 30px
+        width: 26px;
+        height: 1.4px;
+        background: #191917
+    }
+
+    .df-head .df-tool {
+        color: #191917
+    }
+
+    .df-tool svg.df-ico-search {
+        width: 25px;
+        height: 25px
     }
 
     .df-ico-desk {

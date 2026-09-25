@@ -120,9 +120,13 @@
 
                 <button type="button" class="df-tool df-tool--icon" @click="searchOpen = !searchOpen"
                     aria-label="Search">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <svg class="df-ico-desk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                         <circle cx="11" cy="11" r="7" />
                         <path stroke-linecap="round" d="m20 20-3.6-3.6" />
+                    </svg>
+                    <svg class="df-ico-mob df-ico-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                        <circle cx="10.5" cy="10.5" r="6.5" />
+                        <path stroke-linecap="round" d="m15.3 15.3 4.2 4.2" />
                     </svg>
                 </button>
 

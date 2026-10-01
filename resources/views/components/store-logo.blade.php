@@ -22,7 +22,15 @@
          lives in the image itself, so repeating it as text would say it twice.
          With no logo uploaded the name becomes the wordmark instead. The alt
          text keeps the brand readable for screen readers either way. --}}
-    @if($src)
+    {{-- The animated logo video takes the image's place on the storefront.
+         Muted + playsinline so phones autoplay it; the poster shows until it
+         starts. --}}
+    @if(file_exists(public_path('videos/logo.mp4')))
+        <video class="df-logo__img df-logo__video" autoplay muted loop playsinline preload="auto"
+               poster="{{ asset('videos/logo-poster.jpg') }}?v={{ filemtime(public_path('videos/logo-poster.jpg')) }}" aria-label="{{ $name }}">
+            <source src="{{ asset('videos/logo.mp4') }}?v={{ filemtime(public_path('videos/logo.mp4')) }}" type="video/mp4">
+        </video>
+    @elseif($src)
         <img src="{{ $src }}" alt="{{ $name }}" class="df-logo__img">
     @else
         <span class="df-logo__text">{{ $name }}</span>

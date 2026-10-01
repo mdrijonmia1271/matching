@@ -210,11 +210,20 @@
 }
 
 .df-logo__img {
-    height: 70px;
+    margin-top: -17px;
+    height: 54px;
     width: auto;
     max-width: 250px;
     object-fit: contain;
     flex-shrink: 0;
+}
+
+/* The logo video has a white backdrop; multiply lets the header colour
+   show through it so it sits on the bar like the transparent image did. */
+.df-logo__video {
+    display: block;
+    mix-blend-mode: multiply;
+    pointer-events: none;
 }
 
 .df-logo__text {

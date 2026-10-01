@@ -225,12 +225,30 @@ class PosTest extends TestCase
 
         app(SettingsRepository::class)->set(['allow_negative_stock' => false]);
 
+        // A product hidden from the shop still sells at the counter, and the
+        // lookup offers it as sellable.
+        $m->product->update(['is_active' => false]);
+        $this->actingAs($seller)->getJson(route('admin.variants.search', ['q' => 'KUR-M']))
+            ->assertOk()->assertJsonPath('results.0.sellable', true);
+        $this->actingAs($seller)->post(route('admin.pos.store'), $this->sale($m, 1, [
+            'payments' => [['method' => 'cash', 'account_id' => $cash->id, 'amount' => 1000]],
+        ]))->assertSessionHas('success');
+        $this->assertSame(2, Order::count());
+        $this->assertSame(9, (int) $m->fresh()->stock);
+
+        // A switched-off variant cannot be sold.
+        $l->update(['is_active' => false]);
+        $this->actingAs($seller)->post(route('admin.pos.store'), $this->sale($l, 1, [
+            'payments' => [['method' => 'cash', 'account_id' => $cash->id, 'amount' => 800]],
+        ]))->assertSessionHas('error');
+        $this->assertSame(2, Order::count());
+
         // An archived product cannot be sold, whatever the stock says.
         $m->product->delete();
         $this->actingAs($seller)->post(route('admin.pos.store'), $this->sale($m, 1, [
             'payments' => [['method' => 'cash', 'account_id' => $cash->id, 'amount' => 1000]],
         ]))->assertSessionHas('error');
-        $this->assertSame(1, Order::count());
+        $this->assertSame(2, Order::count());
     }
 
     public function test_the_counter_and_the_invoice_are_permission_gated(): void

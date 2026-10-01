@@ -183,7 +183,8 @@ class PosService
                 throw new RuntimeException('One of the scanned products no longer exists.');
             }
 
-            if (! $variant->is_active || $product->trashed() || ! $product->is_active) {
+            // Hidden products (not shown in the shop) still sell at the counter.
+            if (! $variant->is_active || $product->trashed()) {
                 throw new RuntimeException($variant->full_name . ' is not on sale any more. Remove it from the sale.');
             }
 

@@ -159,7 +159,9 @@ class ProductVariant extends Model
             'price' => $this->current_price,
             'cost' => $this->effective_cost,
             'image' => $product?->image_url,
-            'sellable' => $this->is_active && $product && ! $product->trashed() && $product->is_active,
+            // A product hidden from the shop can still be sold at the counter;
+            // only a switched-off variant or a deleted product cannot.
+            'sellable' => $this->is_active && $product && ! $product->trashed(),
         ];
     }
 }

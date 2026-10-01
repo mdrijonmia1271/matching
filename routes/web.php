@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\StaffController;
@@ -137,6 +138,12 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+    // The signed-in staff member's own account (avatar menu).
+    Route::get('profile', [AdminProfileController::class, 'show'])->name('profile.show');
+    Route::patch('profile', [AdminProfileController::class, 'update'])->name('profile.update');
+    Route::get('profile/password', [AdminProfileController::class, 'editPassword'])->name('profile.password');
+    Route::put('profile/password', [AdminProfileController::class, 'updatePassword'])->name('profile.password.update');
 
     Route::resource('categories', AdminCategoryController::class)->except('show');
     Route::resource('products', AdminProductController::class)->except('show')->withTrashed(['destroy']);

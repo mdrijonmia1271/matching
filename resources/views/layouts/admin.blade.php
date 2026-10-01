@@ -19,35 +19,41 @@
         [null, [
             ['admin.dashboard', 'Dashboard', 'M3 12l9-9 9 9M5 10v10h14V10', 'admin.dashboard', null],
         ]],
+        ['Product / Catalogue', [
+            ['admin.categories.index', 'Categories', 'M9 5l7 7-7 7', 'admin.categories.*', 'products.view'],
+            ['admin.products.index', 'Products', 'M9 5l7 7-7 7', 'admin.products.*', 'products.view'],
+            ['admin.purchases.index', 'Purchases', 'M9 5l7 7-7 7', 'admin.purchases.*', 'purchases.view'],
+            ['admin.barcodes.index', 'Barcode labels', 'M9 5l7 7-7 7', 'admin.barcodes.*', 'products.view'],
+        ], true, 'M4 5a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm9 0a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1h-5a1 1 0 01-1-1V5zm-9 9a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5zm9 0a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1h-5a1 1 0 01-1-1v-5z'],
         ['Sales', [
-            ['admin.pos.index', 'Counter (POS)', 'M9 2h6a1 1 0 011 1v3H8V3a1 1 0 011-1zM4 8h16l-1 12a2 2 0 01-2 2H7a2 2 0 01-2-2L4 8zm8 4v6m-3-3h6', 'admin.pos.*', 'pos.sell'],
-            ['admin.orders.index', 'Orders', 'M3 3h2l2.4 12.1a2 2 0 002 1.6h7.7a2 2 0 002-1.6L21 7H6', 'admin.orders.*', 'orders.view'],
-            ['admin.returns.index', 'Returns', 'M3 10h11a4 4 0 010 8h-3m-8-8l4-4m-4 4l4 4', 'admin.returns.*', 'orders.view'],
-            ['admin.advance-orders.index', 'Advance orders', 'M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2zm7-9l1.2 2.4 2.8.4-2 2 .5 2.7L12 17l-2.5 1.5.5-2.7-2-2 2.8-.4z', 'admin.advance-orders.*', 'orders.view'],
-            ['admin.customer-dues.index', 'Customer dues', 'M12 8c-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2m0-8c1.1 0 2.1.4 2.6 1M12 8V7m0 1v8m0 0v1m0-1c-1.1 0-2.1-.4-2.6-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'admin.customer-dues.*', 'customers.view'],
-            ['admin.coupons.index', 'Coupons', 'M9 7h6m-6 4h6m-8 8h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z', 'admin.coupons.*', 'marketing.manage'],
-        ]],
-        ['Catalogue', [
-            ['admin.products.index', 'Products', 'M20 7l-8-4-8 4m16 0v10l-8 4-8-4V7m16 0l-8 4m0 0L4 7m8 4v10', 'admin.products.*', 'products.view'],
-            ['admin.categories.index', 'Categories', 'M4 6h16M4 12h16M4 18h16', 'admin.categories.*', 'products.view'],
-            ['admin.barcodes.index', 'Barcode labels', 'M4 5v14M7 5v14M10 5v14M14 5v14M17 5v14M20 5v14', 'admin.barcodes.*', 'products.view'],
-        ]],
-        ['Inventory', [
-            ['admin.inventory.index', 'Stock overview', 'M4 6h16M4 10h16M4 14h10M4 18h10', 'admin.inventory.index', 'inventory.view'],
-            ['admin.inventory.count', 'Stock count', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', 'admin.inventory.count', 'inventory.adjust'],
-            ['admin.stock.index', 'Stock history', 'M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4', 'admin.stock.*', 'inventory.view'],
-        ]],
-        ['Purchases', [
-            ['admin.purchases.index', 'Purchases', 'M20 7l-8-4-8 4m16 0v10l-8 4-8-4V7m16 0l-8 4m0 0L4 7m8 4v10M9 4.5l8 4', 'admin.purchases.*', 'purchases.view'],
-        ]],
-        ['Contacts', [
-            ['admin.customers.index', 'Customers', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', 'admin.customers.*', 'customers.view'],
-            ['admin.suppliers.index', 'Suppliers', 'M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10h2m8 0h2m-2 0V8h4l3 3v5h-2', 'admin.suppliers.*', 'purchases.view'],
-        ]],
-        ['Finance', [
-            ['admin.accounts.index', 'Accounts', 'M3 10h18M5 10V20M9 10V20M15 10V20M19 10V20M3 20h18M12 3l9 5H3l9-5z', 'admin.accounts.*', 'accounting.view'],
-        ]],
-        // Collapsible: the third element marks a section that folds under its heading.
+            ['admin.pos.index', 'Counter (POS)', 'M9 5l7 7-7 7', 'admin.pos.*', 'pos.sell'],
+            ['admin.orders.index', 'Orders', 'M9 5l7 7-7 7', 'admin.orders.*', 'orders.view'],
+            ['admin.advance-orders.index', 'Advance orders', 'M9 5l7 7-7 7', 'admin.advance-orders.*', 'orders.view'],
+            ['admin.returns.index', 'Returns', 'M9 5l7 7-7 7', 'admin.returns.*', 'orders.view'],
+            ['admin.coupons.index', 'Coupons', 'M9 5l7 7-7 7', 'admin.coupons.*', 'marketing.manage'],
+        ], true, 'M3 3h2l2.4 12.1a2 2 0 002 1.6h7.7a2 2 0 002-1.6L21 7H6'],
+        ['Customer / Supplier', [
+            ['admin.customers.index', 'Customers', 'M9 5l7 7-7 7', 'admin.customers.*', 'customers.view'],
+            ['admin.customer-dues.index', 'Customer dues', 'M9 5l7 7-7 7', 'admin.customer-dues.*', 'customers.view'],
+            ['admin.suppliers.index', 'Suppliers', 'M9 5l7 7-7 7', 'admin.suppliers.*', 'purchases.view'],
+        ], true, 'M17 20h5v-2a3 3 0 00-5.4-1.8M9 20H4v-2a3 3 0 015.4-1.8M15 7a3 3 0 11-6 0 3 3 0 016 0z'],
+        ['Stock', [
+            ['admin.inventory.index', 'Stock overview', 'M9 5l7 7-7 7', 'admin.inventory.index', 'inventory.view'],
+            ['admin.inventory.count', 'Stock count', 'M9 5l7 7-7 7', 'admin.inventory.count', 'inventory.adjust'],
+            ['admin.stock.index', 'Stock history', 'M9 5l7 7-7 7', 'admin.stock.*', 'inventory.view'],
+        ], true, 'M20 7l-8-4-8 4m16 0v10l-8 4-8-4V7m16 0l-8 4m0 0L4 7m8 4v10'],
+        // Collapsible: the third element marks a section that folds under its heading;
+        // an optional fourth is its heading icon (the chart icon otherwise).
+        ['Team & Access', [
+            ['admin.staff.index', 'Staff', 'M9 5l7 7-7 7', 'admin.staff.*', 'staff.view'],
+            ['admin.roles.index', 'Role & Permission', 'M9 5l7 7-7 7', 'admin.roles.*', 'staff.view'],
+        ], true, 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6zm-3 9l2 2 4-4'],
+        ['Administration', [
+            ['admin.settings.edit', 'Settings', 'M9 5l7 7-7 7', 'admin.settings.edit', 'settings.manage'],
+            ['admin.settings.hero.edit', 'Hero section', 'M9 5l7 7-7 7', 'admin.settings.hero.*', 'settings.manage'],
+            ['admin.settings.stats.edit', 'Stats strip', 'M9 5l7 7-7 7', 'admin.settings.stats.*', 'settings.manage'],
+            ['admin.brands.index', 'Brands', 'M9 5l7 7-7 7', 'admin.brands.*', 'products.view'],
+        ], true, 'M10.3 4.3a1.7 1.7 0 013.4 0 1.7 1.7 0 002.6 1.1 1.7 1.7 0 012.3 2.3 1.7 1.7 0 001.1 2.6 1.7 1.7 0 010 3.4 1.7 1.7 0 00-1.1 2.6 1.7 1.7 0 01-2.3 2.3 1.7 1.7 0 00-2.6 1.1 1.7 1.7 0 01-3.4 0 1.7 1.7 0 00-2.6-1.1 1.7 1.7 0 01-2.3-2.3 1.7 1.7 0 00-1.1-2.6 1.7 1.7 0 010-3.4 1.7 1.7 0 001.1-2.6 1.7 1.7 0 012.3-2.3 1.7 1.7 0 002.6-1.1zM15 12a3 3 0 11-6 0 3 3 0 016 0z'],
         ['Reports', [
             ['admin.reports.purchases', 'Purchase report', 'M9 5l7 7-7 7', 'admin.reports.purchases', 'reports.view'],
             ['admin.reports.sales', 'Sales report', 'M9 5l7 7-7 7', 'admin.reports.sales', 'reports.view'],
@@ -57,13 +63,8 @@
             ['admin.reports.sale-profit', 'Sale profit', 'M9 5l7 7-7 7', 'admin.reports.sale-profit', 'reports.view'],
             ['admin.reports.cash-book', 'Cash book', 'M9 5l7 7-7 7', 'admin.reports.cash-book', 'reports.view'],
         ], true],
-        ['Administration', [
-            ['admin.staff.index', 'Staff', 'M17 20h5v-2a3 3 0 00-5.4-1.8M9 20H4v-2a3 3 0 015.4-1.8M15 7a3 3 0 11-6 0 3 3 0 016 0z', 'admin.staff.*', 'staff.view'],
-            ['admin.roles.index', 'Roles & permissions', 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z', 'admin.roles.*', 'staff.view'],
-            ['admin.settings.edit', 'Settings', 'M10.3 4.3a1.7 1.7 0 013.4 0 1.7 1.7 0 002.6 1.1 1.7 1.7 0 012.3 2.3 1.7 1.7 0 001.1 2.6 1.7 1.7 0 010 3.4 1.7 1.7 0 00-1.1 2.6 1.7 1.7 0 01-2.3 2.3 1.7 1.7 0 00-2.6 1.1 1.7 1.7 0 01-3.4 0 1.7 1.7 0 00-2.6-1.1 1.7 1.7 0 01-2.3-2.3 1.7 1.7 0 00-1.1-2.6 1.7 1.7 0 010-3.4 1.7 1.7 0 001.1-2.6 1.7 1.7 0 012.3-2.3 1.7 1.7 0 002.6-1.1zM15 12a3 3 0 11-6 0 3 3 0 016 0z', 'admin.settings.edit', 'settings.manage'],
-            ['admin.settings.hero.edit', 'Hero section', 'M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zm2 4h6m-6 3h4m5 4l3-3 3 3', 'admin.settings.hero.*', 'settings.manage'],
-            ['admin.settings.stats.edit', 'Stats strip', 'M5 20V10m7 10V4m7 16v-6M3 20h18', 'admin.settings.stats.*', 'settings.manage'],
-            ['admin.brands.index', 'Brands', 'M7 7h.01M7 3h5a2 2 0 011.4.6l7 7a2 2 0 010 2.8l-5 5a2 2 0 01-2.8 0l-7-7A2 2 0 013 10V5a2 2 0 012-2z', 'admin.brands.*', 'products.view'],
+        [null, [
+            ['admin.accounts.index', 'Accounts', 'M3 10h18M5 10V20M9 10V20M15 10V20M19 10V20M3 20h18M12 3l9 5H3l9-5z', 'admin.accounts.*', 'accounting.view'],
             ['admin.newsletter.index', 'Newsletter', 'M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', 'admin.newsletter.*', 'marketing.manage'],
             ['admin.activity.index', 'Activity log', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', 'admin.activity.*', 'audit.view'],
         ]],
@@ -83,6 +84,7 @@
                     [$section, $items] = $entry;
                     $visible = array_filter($items, fn ($item) => $item[4] === null || $admin->can($item[4]));
                     $collapsible = $entry[2] ?? false;
+                    $sectionIcon = $entry[3] ?? 'M9 17v-2m3 2v-4m3 4v-6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z';
                     $sectionActive = collect($visible)->contains(fn ($item) => request()->routeIs($item[3]));
                 @endphp
                 @continue(! $visible)
@@ -91,7 +93,7 @@
                     <div x-data="{ open: @js($sectionActive) }" class="space-y-1">
                         <button type="button" @click="open = !open" :aria-expanded="open"
                                 class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition {{ $sectionActive ? 'text-white' : 'hover:bg-white/10 hover:text-white' }}">
-                            <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                            <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $sectionIcon }}"/></svg>
                             <span class="flex-1 text-left">{{ $section }}</span>
                             <svg class="h-4 w-4 text-sky-400 transition-transform" :class="open ? '' : '-rotate-90'" fill="currentColor" viewBox="0 0 20 20"><path d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg>
                         </button>
@@ -129,10 +131,6 @@
             <a href="{{ route('home') }}" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-white/10 hover:text-white">
                 View storefront
             </a>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button class="w-full rounded-lg px-3 py-2.5 text-left text-sm text-rose-400 hover:bg-white/10">Log out</button>
-            </form>
         </div>
     </aside>
 
@@ -146,14 +144,42 @@
 
             <h1 class="text-lg font-bold text-slate-900">@yield('heading', 'Dashboard')</h1>
 
-            <div class="ml-auto flex items-center gap-3 text-sm">
-                <span class="hidden text-right leading-tight sm:block">
-                    <span class="block text-slate-700">{{ $admin->name }}</span>
-                    <span class="block text-xs text-slate-400">{{ $admin->role?->name }}</span>
-                </span>
-                <span class="grid h-8 w-8 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
-                    {{ strtoupper(substr($admin->name, 0, 1)) }}
-                </span>
+            {{-- Avatar menu: the signed-in staff member's own account. --}}
+            <div class="relative ml-auto" x-data="{ open: false }" @keydown.escape.window="open = false" @click.outside="open = false">
+                <button type="button" @click="open = ! open" :aria-expanded="open" aria-haspopup="menu"
+                        class="flex items-center gap-3 rounded-lg px-2 py-1 text-sm transition hover:bg-slate-50">
+                    <span class="hidden text-right leading-tight sm:block">
+                        <span class="block text-slate-700">{{ $admin->name }}</span>
+                        <span class="block text-xs text-slate-400">{{ $admin->role?->name }}</span>
+                    </span>
+                    <span class="grid h-8 w-8 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
+                        {{ strtoupper(substr($admin->name, 0, 1)) }}
+                    </span>
+                    <svg class="h-4 w-4 text-slate-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg>
+                </button>
+
+                <div x-show="open" x-cloak x-transition.origin.top.right role="menu"
+                     class="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-lg">
+                    <div class="border-b border-slate-100 px-4 py-3">
+                        <p class="truncate font-semibold text-slate-900">{{ $admin->name }}</p>
+                        <p class="truncate text-xs text-slate-500">{{ $admin->email }}</p>
+                    </div>
+                    <a href="{{ route('admin.profile.show') }}" role="menuitem" class="flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:bg-slate-50">
+                        <svg class="h-4.5 w-4.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        View profile
+                    </a>
+                    <a href="{{ route('admin.profile.password') }}" role="menuitem" class="flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:bg-slate-50">
+                        <svg class="h-4.5 w-4.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        Change password
+                    </a>
+                    <form method="POST" action="{{ route('logout') }}" class="border-t border-slate-100">
+                        @csrf
+                        <button role="menuitem" class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-rose-600 hover:bg-rose-50">
+                            <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                            Log out
+                        </button>
+                    </form>
+                </div>
             </div>
         </header>
 
